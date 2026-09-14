@@ -82,6 +82,17 @@ class Busqueda:
 
 
 @dataclass
+class Nube:
+    """Sitio publico donde viven los turnos y las citas."""
+
+    url: str = "https://fingenieria.mx/citas"
+    dependencia: str = "sa"
+    refresco_segundos: int = 8      # cada cuanto se puede repetir una consulta
+    latido_segundos: int = 60       # consulta de fondo mientras el sitio local corre
+    espera_segundos: int = 12
+
+
+@dataclass
 class Privacidad:
     mostrar_nombre_en_pantalla: bool = True
     guardar_video_alta: bool = True
@@ -97,6 +108,7 @@ class Config:
     transcripciones: Transcripciones = field(default_factory=Transcripciones)
     correo: Correo = field(default_factory=Correo)
     busqueda: Busqueda = field(default_factory=Busqueda)
+    nube: Nube = field(default_factory=Nube)
     privacidad: Privacidad = field(default_factory=Privacidad)
     ruta_config: Path | None = None
 
@@ -150,6 +162,10 @@ class Config:
     @property
     def clave_gemini(self) -> str:
         return os.environ.get("GEMINI_API_KEY", "")
+
+    @property
+    def token_nube(self) -> str:
+        return os.environ.get("REUNIONES_NUBE_TOKEN", "")
 
 
 def _aplicar(destino: Any, datos: dict[str, Any]) -> None:

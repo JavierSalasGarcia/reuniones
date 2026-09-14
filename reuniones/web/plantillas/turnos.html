@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block titulo %}Fila{% endblock %}
+{% block contenido %}
+<h1>Fila de hoy</h1>
+{% if not listo %}
+  <p class="aviso">{{ error }}</p>
+  <p class="apunte">Configura <code>[nube]</code> en config.toml y el token en .env; se genera en el
+    panel de administración del sitio público.</p>
+{% else %}
+  {% if error %}<p class="aviso">{{ error }} (se muestra lo último que se supo)</p>{% endif %}
+
+  <section>
+    <form method="post" action="/turnos/disponible" class="en-linea">
+      <label class="casilla">
+        <input type="checkbox" name="disponible" value="1" {% if fila.disponible %}checked{% endif %}
+               onchange="this.form.submit()">
+        {% if fila.disponible %}Disponible: la fila está abierta{% else %}No disponible{% endif %}
+      </label>
+      <input name="mensaje" placeholder="Mensaje para la pantalla cuando no estés"
+             value="{{ datos.dependencia.mensaje if datos.dependencia else '' }}">
+      <button class="secundario">Guardar</button>
+    </form>
+    <p class="apunte">
+      {% if fila.abierta %}Quien tome turno ahora sería atendido cerca de las {{ fila.proximo_hueco[11:16] if fila.proximo_hueco else '—' }}.
+      {% else %}La fila está cerrada para nuevos turnos.{% endif %}
+      · <a href="{{ url_pantalla }}" target="_blank">Pantalla del monitor</a>
+      · <a href="{{ url_publica }}" target="_blank">Página pública</a>
+      · <a href="/qr.png" target="_blank">Código QR</a>
+    </p>
+  </section>
+
+  {% if fila.actual %}
+  <section class="atendiendo">
+    <div>
+      <span class="etiqueta">Atendiendo</span>
+      <strong>{{ fila.actual.folio }} · {{ fila.actual.nombre }}</strong>
+      <p>{{ fila.actual.asunto }} <span class="meta">{{ fila.actual.email }}</span></p>
+    </div>
+    <form method="post" action="/turnos/{{ fila.actual.id }}/cerrar" class="en-linea">
+      <button name="accion" value="atendido">Terminé</button>
+      <button name="accion" value="ausente" class="secundario">No se presentó</button>
+    </form>
+  </section>
+  {% endif %}
+
+  <section>
+    <h2>En espera ({{ fila.espera|length }})</h2>
+    {% if fila.espera %}
+    <table class="tabla">
+      <thead><tr><th>Turno</th><th>Persona</th><th>Asunto</th><th>Hora</th><th></th></tr></thead>
+      <tbody>
+        {% for t in fila.espera %}
+        <tr>
+          <td><strong>{{ t.folio }}</strong></td>
+          <td>{{ t.nombre }}<br><span class="meta">{{ t.email }}</span></td>
+          <td>{{ t.asunto }} <span class="meta">{{ t.minutos }} min</span></td>
+          <td>{{ t.estimado[11:16] if t.estimado else 'sin hora' }}</td>
+          <td class="acciones-fila">
+            <form method="post" action="/turnos/{{ t.id }}/llamar"><button>Llamar</button></form>
+            <form method="post" action="/turnos/{{ t.id }}/cerrar">
+              <button name="accion" value="cancelar" class="secundario">Cancelar</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="apunte">Al llamar a alguien se abre su expediente y se crea la reunión con su asunto.
+      Si es su primera vez, el sistema te lleva al alta con sus datos ya escritos.</p>
+    {% else %}<p class="vacio">Nadie esperando. {{ fila.atendidos }} atendido(s) hoy.</p>{% endif %}
+  </section>
+
+  <section>
+    <h2>Solicitudes de reunión ({{ fila.citas|length }})</h2>
+    {% for c in fila.citas %}
+    <article class="solicitud">
+      <p><strong>{{ c.nombre }}</strong> <span class="meta">{{ c.email }}</span></p>
+      <p>{{ c.asunto }} · propone {{ c.propuesta[:16] }} · {{ c.minutos }} minutos</p>
+      {% if c.descripcion %}<pre class="texto chica">{{ c.descripcion }}</pre>{% endif %}
+      {% if c.adjuntos %}<p class="meta">{{ c.adjuntos|length }} archivo(s); se guardan en el expediente al aprobar.</p>{% endif %}
+      <form method="post" action="/cita/{{ c.id }}/resolver" class="en-linea">
+        <input type="hidden" name="accion" value="aprobar">
+        <input name="inicio" value="{{ c.propuesta }}" size="19">
+        <button>Aprobar</button>
+      </form>
+      <form method="post" action="/cita/{{ c.id }}/resolver" class="en-linea">
+        <input type="hidden" name="accion" value="rechazar">
+        <input name="motivo" placeholder="Motivo (le llega por correo)">
+        <button class="secundario">No puedo ese día</button>
+      </form>
+    </article>
+    {% else %}<p class="vacio">Sin solicitudes pendientes.</p>{% endfor %}
+  </section>
+
+  {% if fila.bloqueos %}
+  <section>
+    <h2>Reuniones de hoy</h2>
+    <ul class="lista chica">
+      {% for b in fila.bloqueos %}
+      <li>{{ b.inicio[11:16] }} a {{ b.fin[11:16] }} · {{ b.motivo }}</li>
+      {% endfor %}
+    </ul>
+    <p class="apunte">Los turnos no invaden estos bloques ni los diez minutos previos.</p>
+  </section>
+  {% endif %}
+{% endif %}
+{% endblock %}

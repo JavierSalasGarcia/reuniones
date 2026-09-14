@@ -2,10 +2,12 @@
 {% block titulo %}Alta{% endblock %}
 {% block contenido %}
 <h1>Primera visita</h1>
+{% if asunto %}<p class="apunte">Viene de la fila con el asunto «{{ asunto }}»; al guardar se crea la reunión.</p>{% endif %}
 <p class="apunte">Al guardar, la cámara graba {{ cfg.camara.segundos_alta }} segundos y de ahí se extrae
 la fotografía. Pide a la persona que mire de frente, con gesto neutro.</p>
 {% if error %}<p class="error">{{ error }}</p>{% endif %}
 <form method="post" class="formulario">
+  <input type="hidden" name="asunto" value="{{ asunto or '' }}">
   <label>Nombre completo
     <input name="nombre" required value="{{ datos.nombre if datos else '' }}">
   </label>

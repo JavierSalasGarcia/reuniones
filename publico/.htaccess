@@ -1,0 +1,23 @@
+# Todas las direcciones pasan por index.php, que decide la vista.
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /citas/
+
+  # Deja pasar archivos y carpetas que existen de verdad (estatico/, etc.)
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # La cabecera Authorization se pierde en algunos hospedajes compartidos.
+  RewriteCond %{HTTP:Authorization} .
+  RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+  RewriteRule ^(.*)$ index.php?r=$1 [QSA,L]
+</IfModule>
+
+# Nunca servir directamente lo que sube la gente ni la configuracion.
+<FilesMatch "^(config\.php)$">
+  Require all denied
+</FilesMatch>

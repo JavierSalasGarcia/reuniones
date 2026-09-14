@@ -147,3 +147,43 @@ def test_ajustes_muestra_el_estado(cliente):
     respuesta = cliente.get("/ajustes")
     assert respuesta.status_code == 200
     assert "Carpeta de datos" in respuesta.text
+
+
+def test_la_fila_explica_si_falta_configurar_la_nube(cliente, monkeypatch):
+    monkeypatch.delenv("REUNIONES_NUBE_TOKEN", raising=False)
+    respuesta = cliente.get("/turnos")
+    assert respuesta.status_code == 200
+    assert "token" in respuesta.text.lower()
+
+
+def test_la_fila_muestra_a_quien_espera(cliente, entorno, monkeypatch):
+    from reuniones import nube
+    from tests.test_nube import ESTADO, enchufar
+
+    monkeypatch.setenv("REUNIONES_NUBE_TOKEN", "token-de-prueba")
+    entorno.nube.url = "https://fingenieria.mx/citas"
+    entorno.nube.dependencia = "sa"
+    nube._cache.datos, nube._cache.momento = {}, 0.0
+
+    import httpx
+    enchufar(monkeypatch, lambda p: httpx.Response(200, json=ESTADO))
+    pagina = cliente.get("/turnos").text
+    assert "Luis Mora" in pagina and "Beca" in pagina
+    assert "Pedro Lara" in pagina, "las solicitudes de reunión también se ven"
+    nube._cache.datos, nube._cache.momento = {}, 0.0
+
+
+def test_la_agenda_muestra_el_horario_publicado(cliente, entorno, monkeypatch):
+    from reuniones import nube
+    from tests.test_nube import ESTADO, enchufar
+
+    monkeypatch.setenv("REUNIONES_NUBE_TOKEN", "token-de-prueba")
+    entorno.nube.url = "https://fingenieria.mx/citas"
+    entorno.nube.dependencia = "sa"
+    nube._cache.datos, nube._cache.momento = {}, 0.0
+
+    import httpx
+    enchufar(monkeypatch, lambda p: httpx.Response(200, json=ESTADO))
+    pagina = cliente.get("/agenda").text
+    assert "Horario semanal" in pagina and "09:00" in pagina
+    nube._cache.datos, nube._cache.momento = {}, 0.0

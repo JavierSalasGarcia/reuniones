@@ -11,6 +11,20 @@
   <div id="resultado" class="resultado"></div>
 </section>
 
+{% if fila and (fila.espera or fila.actual) %}
+<section class="resumen-fila">
+  {% if fila.actual %}
+  <span><span class="numero">{{ fila.actual.folio }}</span> atendiendo a {{ fila.actual.nombre }}</span>
+  {% endif %}
+  <span><span class="numero">{{ fila.espera|length }}</span> esperando</span>
+  {% if fila.espera %}
+  <span class="meta">Sigue {{ fila.espera[0].nombre }} · {{ fila.espera[0].asunto }}
+    ({{ fila.espera[0].estimado[11:16] if fila.espera[0].estimado else 'sin hora' }})</span>
+  {% endif %}
+  <a class="boton secundario" href="/turnos">Ver la fila</a>
+</section>
+{% endif %}
+
 {% if pendientes %}
 <p class="aviso"><a href="/bandeja">Hay {{ pendientes }} archivo(s) esperando que los asignes a una reunión.</a></p>
 {% endif %}

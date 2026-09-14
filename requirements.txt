@@ -8,6 +8,8 @@ watchdog>=4.0
 python-dotenv>=1.0
 numpy>=1.26
 fpdf2>=2.7
+httpx>=0.27
+qrcode[pil]>=7.4
 
 # Vision y reconocimiento facial (solo en la laptop con camara)
 opencv-python>=4.10

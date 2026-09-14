@@ -160,3 +160,17 @@ footer {
   .barra { padding: 10px 16px; gap: 12px; }
   .barra nav { gap: 12px; font-size: 14px; }
 }
+
+/* Fila de turnos y agenda */
+.atendiendo {
+  display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; align-items: center;
+  background: var(--acento-claro); border-color: #cfe1f0;
+}
+.atendiendo strong { font-size: 20px; }
+.atendiendo p { margin: 4px 0 0; }
+.acciones-fila { display: flex; gap: 6px; }
+.acciones-fila form { margin: 0; }
+.solicitud { border-top: 1px solid var(--linea); padding-top: 14px; margin-top: 14px; }
+.solicitud:first-of-type { border-top: 0; padding-top: 0; margin-top: 0; }
+.resumen-fila { display: flex; gap: 18px; flex-wrap: wrap; align-items: baseline; }
+.resumen-fila .numero { font-size: 26px; font-weight: 700; color: var(--acento); }

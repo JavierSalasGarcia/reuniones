@@ -10,3 +10,9 @@ datos/
 *.db-wal
 *.db-shm
 .pytest_cache/
+
+# Parte publica
+publico/config.php
+publico/subidas/citas/*
+publico/subidas/pendientes/*
+!publico/subidas/**/.gitkeep

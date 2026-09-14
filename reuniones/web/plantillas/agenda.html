@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block titulo %}Agenda{% endblock %}
+{% block contenido %}
+<h1>Disponibilidad</h1>
+{% if not listo %}
+  <p class="aviso">{{ error }}</p>
+{% else %}
+  {% if error %}<p class="aviso">{{ error }}</p>{% endif %}
+  <p class="apunte">Estos horarios son los que ve la gente al tomar turno o agendar en
+    <a href="{{ url_publica }}" target="_blank">{{ url_publica }}</a>.</p>
+
+  <section>
+    <h2>Horario semanal</h2>
+    <form method="post" action="/agenda/horarios">
+      <table class="tabla">
+        <thead><tr><th>Día</th><th>De</th><th>A</th></tr></thead>
+        <tbody>
+          {% set nombres = {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado', 7: 'Domingo'} %}
+          {% for numero in range(1, 8) %}
+          {% set tramos = semana[numero] %}
+          {% for indice in range(2) %}
+          {% set tramo = tramos[indice] if tramos|length > indice else none %}
+          <tr>
+            <td>{% if indice == 0 %}{{ nombres[numero] }}{% else %}<span class="meta">segundo bloque</span>{% endif %}
+              <input type="hidden" name="dia" value="{{ numero }}"></td>
+            <td><input type="time" name="inicio" value="{{ tramo.inicio if tramo else '' }}"></td>
+            <td><input type="time" name="fin" value="{{ tramo.fin if tramo else '' }}"></td>
+          </tr>
+          {% endfor %}
+          {% endfor %}
+        </tbody>
+      </table>
+      <button>Publicar horario</button>
+      <p class="apunte">Deja vacío un renglón para cerrar ese bloque. El segundo bloque sirve
+        para partir el día, por ejemplo de 9 a 11 y de 12 a 14.</p>
+    </form>
+  </section>
+
+  <section>
+    <h2>Apartar un rato</h2>
+    <p class="apunte">Junta, clase o salida: la fila se recorre sola y a quien se le mueva mucho
+      la hora se le avisa por correo.</p>
+    <form method="post" action="/agenda/bloqueo" class="en-linea">
+      <input type="date" name="fecha" required>
+      <input type="time" name="hora" required>
+      <select name="minutos">
+        {% for m in [15, 30, 45, 60, 90, 120] %}<option value="{{ m }}">{{ m }} min</option>{% endfor %}
+      </select>
+      <input name="motivo" placeholder="Motivo" value="Reunión">
+      <button>Apartar</button>
+    </form>
+
+    {% if bloqueos %}
+    <ul class="lista chica">
+      {% for b in bloqueos %}
+      <li>
+        {{ b.inicio[:16] }} a {{ b.fin[11:16] }} · {{ b.motivo }}
+        {% if b.origen == 'manual' %}
+        <form method="post" action="/agenda/bloqueo/{{ b.id }}/borrar" class="en-linea">
+          <button class="secundario">Quitar</button>
+        </form>
+        {% else %}<span class="meta">(cita confirmada)</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </section>
+
+  <section>
+    <h2>Código QR</h2>
+    <p>Imprímelo para la puerta: lleva a la misma página que el de la pantalla.</p>
+    <p><a class="boton secundario" href="/qr.png" target="_blank">Descargar el QR</a></p>
+  </section>
+{% endif %}
+{% endblock %}

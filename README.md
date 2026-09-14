@@ -9,8 +9,10 @@ Todo corre en la laptop. Las fotografías, los vectores faciales, las transcripc
 minutas nunca salen del equipo; lo único que sale es el correo que tú decides enviar y, si
 activas esa opción, los fragmentos que Gemini necesita para redactar una respuesta de búsqueda.
 
-Esta es la primera de las tres etapas del proyecto. Faltan la parte pública en el hosting
-(turnos, citas y disponibilidad con código QR) y el kiosco de la Raspberry Pi.
+El proyecto tiene tres etapas. Las dos primeras están construidas: el núcleo local
+(`reuniones/`) y la parte pública de turnos y citas (`publico/`, que se sube al hosting).
+Falta el kiosco de la Raspberry Pi, que será un navegador en pantalla completa apuntando
+a la vista que la parte pública ya expone.
 
 ## Instalación en Windows
 
@@ -57,6 +59,25 @@ o ninguna, el archivo aparece en la bandeja para que lo asignes con un clic.
 
 Desde la reunión puedes registrar acuerdos con responsable y fecha, ver la minuta en PDF y
 enviarla por correo. La transcripción original nunca se adjunta.
+
+## Turnos y citas
+
+La carpeta `publico/` es el sitio que se sube a `fingenieria.mx/citas/`. Quien escanea el
+QR elige entre un turno de 5 o 10 minutos para hoy, o una reunión más larga que se agenda
+y queda como solicitud hasta que tú la apruebas. Cada dependencia tiene su propia clave en
+la dirección (`/citas/sa` para la subdirección, `/citas/dir` para dirección), su fila, su
+pantalla y su token. Su instalación se explica en `publico/LEEME.md`.
+
+En tu laptop, la pestaña **Fila** muestra quién espera con su asunto y su hora estimada.
+Al llamar a alguien se abre su expediente y se crea la reunión con el asunto que esa
+persona escribió; si es su primera vez, el sistema te lleva al alta con sus datos ya
+capturados. La pestaña **Agenda** publica tu horario semanal, aparta ratos para juntas y
+genera el QR para imprimir.
+
+La hora estimada de cada turno se recalcula sola: se encadenan los turnos con un colchón
+de dos minutos, ninguno invade una reunión agendada ni los diez minutos previos, y lo que
+ya no cabe en el horario del día deja la fila cerrada. A quien se le recorre la hora de
+forma notable le llega un correo con el enlace para cancelar.
 
 ## Otros comandos
 

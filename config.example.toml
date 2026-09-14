@@ -46,6 +46,12 @@ copia_oculta = ""     # opcional: copia oculta de cada minuta enviada
 [busqueda]
 resultados = 8
 
+[nube]
+# Sitio publico de turnos y citas (segunda etapa).
+url = "https://fingenieria.mx/citas"
+dependencia = "sa"          # la clave de tu oficina: sa, dir, ...
+latido_segundos = 60
+
 [privacidad]
 mostrar_nombre_en_pantalla = true
 guardar_video_alta = true

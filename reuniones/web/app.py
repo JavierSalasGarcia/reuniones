@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from .. import (busqueda, config, correo, db, expediente, informe, ingesta,
-                mantenimiento, personas, util)
+                mantenimiento, nube, personas, turnos, util)
 
 AQUI = Path(__file__).resolve().parent
 plantillas = Jinja2Templates(directory=str(AQUI / "plantillas"))
@@ -23,11 +23,12 @@ plantillas.env.filters["fecha_larga"] = util.fecha_larga
 plantillas.env.filters["recorte"] = util.recortar_texto
 
 vigilante: ingesta.Vigilante | None = None
+latido: nube.Latido | None = None
 
 
 @asynccontextmanager
 async def ciclo(app: FastAPI):
-    global vigilante
+    global vigilante, latido
     cfg = config.actual()
     cfg.crear_carpetas()
     with db.sesion() as con:
@@ -36,11 +37,15 @@ async def ciclo(app: FastAPI):
     mantenimiento.limpiar_temporal()
     vigilante = ingesta.Vigilante()
     vigilante.iniciar()
+    latido = nube.Latido()
+    latido.iniciar()
     try:
         yield
     finally:
         if vigilante is not None:
             vigilante.detener()
+        if latido is not None:
+            latido.detener()
 
 
 app = FastAPI(title="Expedientes de reuniones", lifespan=ciclo)
@@ -81,10 +86,12 @@ def inicio(request: Request, con: sqlite3.Connection = Depends(base_datos)):
         "JOIN reuniones r ON r.id = c.reunion_id JOIN personas p ON p.id = r.persona_id "
         "WHERE c.estado = 'abierto' ORDER BY c.compromiso IS NULL, c.compromiso LIMIT 8"
     ).fetchall()
+    guardado = nube.ultimo_estado()
     return _pagina(request, "inicio.html",
                    recientes=expediente.recientes(con, 8),
                    pendientes=pendientes,
                    compromisos=compromisos,
+                   fila=turnos.resumen_fila(guardado) if guardado else None,
                    resumen=mantenimiento.resumen(con))
 
 
@@ -125,24 +132,29 @@ def lista_personas(request: Request, q: str = "", con: sqlite3.Connection = Depe
 
 
 @app.get("/alta", response_class=HTMLResponse)
-def formulario_alta(request: Request):
-    return _pagina(request, "alta.html")
+def formulario_alta(request: Request, nombre: str = "", email: str = "", asunto: str = ""):
+    return _pagina(request, "alta.html",
+                   datos={"nombre": nombre, "email": email, "tipo": "otro", "adscripcion": ""},
+                   asunto=asunto)
 
 
 @app.post("/alta")
 def crear_alta(request: Request, nombre: str = Form(...), email: str = Form(...),
                adscripcion: str = Form(""), tipo: str = Form("otro"),
-               consentimiento: str = Form(""),
+               consentimiento: str = Form(""), asunto: str = Form(""),
                con: sqlite3.Connection = Depends(base_datos)):
+    previos = {"nombre": nombre, "email": email, "adscripcion": adscripcion, "tipo": tipo}
     if not consentimiento:
         return _pagina(request, "alta.html", error="Falta registrar el consentimiento de la persona.",
-                       datos={"nombre": nombre, "email": email, "adscripcion": adscripcion, "tipo": tipo})
+                       datos=previos, asunto=asunto)
     try:
         resultado = personas.alta_con_camara(con, nombre, email, adscripcion=adscripcion, tipo=tipo)
     except (personas.ErrorAlta, RuntimeError) as error:
-        return _pagina(request, "alta.html", error=str(error),
-                       datos={"nombre": nombre, "email": email, "adscripcion": adscripcion, "tipo": tipo})
+        return _pagina(request, "alta.html", error=str(error), datos=previos, asunto=asunto)
     con.commit()
+    if asunto.strip():
+        reunion_id = expediente.crear_reunion(con, resultado["persona_id"], asunto, origen="turno")
+        return RedirectResponse(f"/reunion/{reunion_id}", status_code=303)
     return RedirectResponse(f"/persona/{resultado['persona_id']}?nuevo=1", status_code=303)
 
 
@@ -377,3 +389,133 @@ def reindexar(con: sqlite3.Connection = Depends(base_datos)):
 def limpiar_videos(con: sqlite3.Connection = Depends(base_datos)):
     borrados = mantenimiento.borrar_videos_vencidos(con)
     return JSONResponse({"ok": True, "borrados": len(borrados)})
+
+
+# --- fila publica y agenda ------------------------------------------------
+
+@app.get("/turnos", response_class=HTMLResponse)
+def ver_turnos(request: Request, con: sqlite3.Connection = Depends(base_datos)):
+    listo, motivo = nube.configurada()
+    datos, error = nube.estado_seguro() if listo else ({}, motivo)
+    return _pagina(request, "turnos.html",
+                   listo=listo,
+                   error=error,
+                   fila=turnos.resumen_fila(datos),
+                   datos=datos,
+                   url_publica=nube.url_publica() if listo else "",
+                   url_pantalla=nube.url_publica("pantalla") if listo else "")
+
+
+@app.post("/turnos/disponible")
+def cambiar_disponible(disponible: str = Form(""), mensaje: str = Form("")):
+    try:
+        nube.disponibilidad(bool(disponible), mensaje)
+    except nube.ErrorNube as error:
+        return RedirectResponse(f"/turnos?error={error}", status_code=303)
+    return RedirectResponse("/turnos", status_code=303)
+
+
+@app.post("/turnos/{turno_id}/llamar")
+def llamar_turno(turno_id: int, con: sqlite3.Connection = Depends(base_datos)):
+    datos = nube.ultimo_estado()
+    turno = next((t for t in datos.get("turnos", []) if int(t["id"]) == turno_id), None)
+    if turno is None:
+        raise HTTPException(404, "Ese turno ya no está en la fila.")
+    try:
+        enlace = turnos.llamar(con, turno)
+    except nube.ErrorNube as error:
+        return RedirectResponse(f"/turnos?error={error}", status_code=303)
+    if enlace["reunion_id"]:
+        return RedirectResponse(f"/reunion/{enlace['reunion_id']}", status_code=303)
+    # Es su primera vez: pasamos directo al alta con sus datos ya escritos.
+    from urllib.parse import urlencode
+    consulta = urlencode({"nombre": turno.get("nombre", ""), "email": turno.get("email", ""),
+                          "asunto": turno.get("asunto", "")})
+    return RedirectResponse(f"/alta?{consulta}", status_code=303)
+
+
+@app.post("/turnos/{turno_id}/cerrar")
+def cerrar_turno(turno_id: int, accion: str = Form("atendido")):
+    if accion not in ("atendido", "ausente", "cancelar"):
+        raise HTTPException(400, "Acción desconocida.")
+    try:
+        turnos.cerrar(turno_id, accion)
+    except nube.ErrorNube as error:
+        return RedirectResponse(f"/turnos?error={error}", status_code=303)
+    return RedirectResponse("/turnos", status_code=303)
+
+
+@app.post("/cita/{cita_id}/resolver")
+def resolver_cita(cita_id: int, accion: str = Form("aprobar"), inicio: str = Form(""),
+                  motivo: str = Form(""), con: sqlite3.Connection = Depends(base_datos)):
+    datos = nube.ultimo_estado()
+    cita = next((c for c in datos.get("citas", []) if int(c["id"]) == cita_id), None)
+    if cita is None:
+        raise HTTPException(404, "Esa solicitud ya no está pendiente.")
+    try:
+        if accion == "aprobar":
+            turnos.aprobar_cita(con, cita, inicio or None, motivo)
+        else:
+            turnos.rechazar_cita(cita, motivo)
+    except nube.ErrorNube as error:
+        return RedirectResponse(f"/turnos?error={error}", status_code=303)
+    con.commit()
+    return RedirectResponse("/turnos", status_code=303)
+
+
+@app.get("/agenda", response_class=HTMLResponse)
+def ver_agenda(request: Request):
+    listo, motivo = nube.configurada()
+    datos, error = nube.estado_seguro() if listo else ({}, motivo)
+    semana = {dia: [] for dia in range(1, 8)}
+    for tramo in datos.get("horarios", []):
+        semana[int(tramo["dia"])].append(tramo)
+    return _pagina(request, "agenda.html",
+                   listo=listo, error=error, datos=datos, semana=semana,
+                   bloqueos=datos.get("bloqueos", []),
+                   url_publica=nube.url_publica() if listo else "")
+
+
+@app.post("/agenda/horarios")
+def guardar_horarios(request: Request, inicio: list[str] = Form([]), fin: list[str] = Form([]),
+                     dia: list[str] = Form([])):
+    horarios = []
+    for numero, desde, hasta in zip(dia, inicio, fin):
+        if desde and hasta and hasta > desde:
+            horarios.append({"dia": int(numero), "inicio": desde, "fin": hasta})
+    try:
+        nube.publicar_horarios(horarios)
+    except nube.ErrorNube as error:
+        return RedirectResponse(f"/agenda?error={error}", status_code=303)
+    return RedirectResponse("/agenda", status_code=303)
+
+
+@app.post("/agenda/bloqueo")
+def nuevo_bloqueo(fecha: str = Form(...), hora: str = Form(...), minutos: int = Form(30),
+                  motivo: str = Form("Reunión")):
+    inicio = util.a_fecha(f"{fecha} {hora}")
+    if inicio is None:
+        return RedirectResponse("/agenda?error=Fecha u hora inválida", status_code=303)
+    try:
+        turnos.bloquear_reunion(inicio, minutos, motivo)
+    except nube.ErrorNube as error:
+        return RedirectResponse(f"/agenda?error={error}", status_code=303)
+    return RedirectResponse("/agenda", status_code=303)
+
+
+@app.post("/agenda/bloqueo/{bloqueo_id}/borrar")
+def borrar_bloqueo(bloqueo_id: int):
+    try:
+        nube.borrar_bloqueo(bloqueo_id)
+    except nube.ErrorNube as error:
+        return RedirectResponse(f"/agenda?error={error}", status_code=303)
+    return RedirectResponse("/agenda", status_code=303)
+
+
+@app.get("/qr.png")
+def codigo_qr():
+    try:
+        ruta = nube.generar_qr()
+    except nube.ErrorNube as error:
+        raise HTTPException(503, str(error))
+    return FileResponse(ruta, media_type="image/png", filename=ruta.name)

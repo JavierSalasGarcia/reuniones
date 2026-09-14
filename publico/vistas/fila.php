@@ -1,0 +1,47 @@
+<section class="tarjeta">
+  <h1>La fila de hoy</h1>
+  <p class="meta"><?= u_escapar($dep['nombre']) ?> · actualizado a las <?= u_hora($estado['ahora']) ?></p>
+
+  <?php if ($estado['actual']): ?>
+  <div class="atendiendo">
+    <span class="etiqueta">Atendiendo</span>
+    <strong class="folio"><?= (int) $estado['actual']['folio'] ?></strong>
+    <span><?= u_escapar($estado['actual']['nombre_publico'] ?: u_nombre_corto($estado['actual']['nombre'])) ?></span>
+  </div>
+  <?php else: ?>
+  <p class="estado <?= $estado['abierta'] ? 'bien' : 'aviso' ?>">
+    <?= $estado['abierta'] ? 'Nadie está siendo atendido en este momento.' : u_escapar($estado['motivo_cierre']) ?>
+  </p>
+  <?php endif; ?>
+
+  <?php if ($estado['espera']): ?>
+  <table class="tabla">
+    <thead><tr><th>Turno</th><th>Persona</th><th>Hora aproximada</th></tr></thead>
+    <tbody>
+      <?php foreach ($estado['espera'] as $turno): ?>
+      <tr>
+        <td class="folio-chico"><?= (int) $turno['folio'] ?></td>
+        <td><?= u_escapar($turno['nombre_publico'] ?: u_nombre_corto($turno['nombre'])) ?></td>
+        <td><?= $turno['estimado'] ? u_hora($turno['estimado']) : 'sin hora hoy' ?></td>
+      </tr>
+      <?php endforeach; ?>
+    </tbody>
+  </table>
+  <?php else: ?>
+  <p class="meta">No hay nadie esperando.</p>
+  <?php endif; ?>
+
+  <?php if ($estado['bloqueos']): ?>
+  <h2>Reuniones agendadas hoy</h2>
+  <ul class="lista chica">
+    <?php foreach ($estado['bloqueos'] as $bloqueo): ?>
+    <li><?= u_hora($bloqueo['inicio']) ?> a <?= u_hora($bloqueo['fin']) ?>
+      <span class="meta"><?= u_escapar($bloqueo['motivo']) ?></span></li>
+    <?php endforeach; ?>
+  </ul>
+  <p class="meta">Los turnos que caen en esos horarios se recorren automáticamente.</p>
+  <?php endif; ?>
+
+  <p><a class="boton" href="<?= ruta($dep['clave']) ?>">Tomar turno</a></p>
+</section>
+<script>setTimeout(() => location.reload(), 30000);</script>
