@@ -1,0 +1,21 @@
+# Nucleo (siempre necesario)
+fastapi>=0.115
+uvicorn[standard]>=0.30
+jinja2>=3.1
+python-multipart>=0.0.9
+typer>=0.12
+watchdog>=4.0
+python-dotenv>=1.0
+numpy>=1.26
+fpdf2>=2.7
+
+# Vision y reconocimiento facial (solo en la laptop con camara)
+opencv-python>=4.10
+insightface>=0.7.3
+onnxruntime>=1.18
+
+# Busqueda semantica local (opcional; sin esto la busqueda usa solo palabras clave)
+sentence-transformers>=3.0
+
+# Redaccion de respuestas con Gemini (opcional)
+google-genai>=0.3

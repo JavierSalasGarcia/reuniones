@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block titulo %}{{ persona.nombre }}{% endblock %}
+{% block contenido %}
+{% if nuevo %}<p class="exito">Expediente creado. Revisa la fotografía; si no te convence puedes cambiarla por una de las alternativas.</p>{% endif %}
+
+<section class="ficha">
+  {% if persona.foto %}<img class="retrato" src="/archivo/{{ persona.foto }}" alt="{{ persona.nombre }}">
+  {% else %}<div class="retrato sinfoto"></div>{% endif %}
+  <div>
+    <h1>{{ persona.nombre }}</h1>
+    <p class="meta">{{ persona.email }}{% if persona.adscripcion %} · {{ persona.adscripcion }}{% endif %} · {{ persona.tipo }}</p>
+    <ul class="briefing">
+      {% for linea in lineas %}<li>{{ linea }}</li>{% endfor %}
+    </ul>
+    <form class="en-linea" method="post" action="/persona/{{ persona.id }}/reunion">
+      <input name="asunto" placeholder="Asunto de esta reunión" required>
+      <select name="categoria">
+        {% for c in ['', 'academico', 'administrativo', 'becas', 'disciplinario', 'otro'] %}
+        <option value="{{ c }}">{{ c or 'categoría' }}</option>
+        {% endfor %}
+      </select>
+      <button>Iniciar reunión</button>
+    </form>
+    <p class="acciones">
+      <a href="/persona/{{ persona.id }}/expediente.pdf">Expediente en PDF</a>
+      <a href="#editar">Editar datos</a>
+      {% if alternativas %}<a href="#fotos">Cambiar fotografía</a>{% endif %}
+    </p>
+  </div>
+</section>
+
+{% if briefing.pendientes %}
+<section>
+  <h2>Pendientes abiertos</h2>
+  <ul class="lista">
+    {% for c in briefing.pendientes %}
+    <li><p>{{ c.texto }}</p>
+      <span class="meta">{{ c.responsable or 'sin responsable' }} · {{ c.compromiso|fecha if c.compromiso else 'sin fecha' }} · de la reunión del {{ c.inicio|fecha }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<section>
+  <h2>Historial</h2>
+  {% if historial %}
+  <table class="tabla">
+    <thead><tr><th>Fecha</th><th>Asunto</th><th>Documentos</th><th></th></tr></thead>
+    <tbody>
+      {% for r in historial %}
+      <tr>
+        <td>{{ r.inicio|fecha }}</td>
+        <td>{{ r.asunto or 'Sin asunto' }}{% if r.categoria %} <span class="etiqueta">{{ r.categoria }}</span>{% endif %}</td>
+        <td>{% if r.tiene_minuta %}minuta{% endif %}{% if r.tiene_original %} · original{% endif %}
+            {% if r.pendientes %} · {{ r.pendientes }} pendiente(s){% endif %}</td>
+        <td><a href="/reunion/{{ r.id }}">Ver minuta</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p class="vacio">Sin reuniones registradas.</p>{% endif %}
+</section>
+
+{% if alternativas %}
+<section id="fotos">
+  <h2>Otras fotografías del video</h2>
+  <div class="rejilla chica">
+    {% for ruta in alternativas %}
+    <form method="post" action="/persona/{{ persona.id }}/foto">
+      <img src="/archivo/{{ ruta }}" alt="">
+      <input type="hidden" name="posicion" value="{{ loop.index }}">
+      <button class="secundario">Usar esta</button>
+    </form>
+    {% endfor %}
+  </div>
+  <p class="apunte">
+    {% if persona.video_expira %}El video del alta se borra solo el {{ persona.video_expira|fecha }}.
+    {% else %}El video del alta ya fue borrado.{% endif %}
+  </p>
+</section>
+{% endif %}
+
+<section id="editar">
+  <h2>Datos</h2>
+  <form method="post" action="/persona/{{ persona.id }}/editar" class="formulario">
+    <label>Nombre <input name="nombre" value="{{ persona.nombre }}" required></label>
+    <label>Correo <input name="email" type="email" value="{{ persona.email }}" required></label>
+    <label>Adscripción <input name="adscripcion" value="{{ persona.adscripcion or '' }}"></label>
+    <label>Tipo
+      <select name="tipo">
+        {% for t in ['alumno', 'profesor', 'administrativo', 'otro'] %}
+        <option value="{{ t }}" {% if persona.tipo == t %}selected{% endif %}>{{ t }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Notas <textarea name="notas" rows="3">{{ persona.notas or '' }}</textarea></label>
+    <label class="casilla">
+      <input type="checkbox" name="reservado" value="1" {% if persona.reservado %}checked{% endif %}>
+      Caso reservado: no mostrar su nombre en la pantalla de turnos.
+    </label>
+    <button>Guardar</button>
+  </form>
+</section>
+{% endblock %}

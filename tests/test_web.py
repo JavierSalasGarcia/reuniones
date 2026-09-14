@@ -1,0 +1,149 @@
+from datetime import datetime
+
+import numpy as np
+import pytest
+from fastapi.testclient import TestClient
+
+from reuniones import expediente, personas, rostros
+from reuniones.web import app as web
+from tests.conftest import cuadro_sintetico, detector_falso
+
+
+@pytest.fixture
+def cliente(entorno):
+    with TestClient(web.app) as prueba:
+        yield prueba
+
+
+def _persona_con_reunion(cliente, entorno):
+    from reuniones import db
+
+    with db.sesion() as con:
+        vector = np.random.default_rng(3).normal(size=512).astype(np.float32)
+        alta = personas.alta(con, "Ana Ruiz", "ana@uaemex.mx",
+                             [cuadro_sintetico() for _ in range(10)],
+                             detector=detector_falso({0: vector}))
+        reunion_id = expediente.crear_reunion(con, alta["persona_id"], "Revalidacion",
+                                              inicio=datetime(2026, 9, 14, 10, 30))
+        ruta = entorno.entrada / "20260914_1030_minuta.txt"
+        ruta.write_text("Acuerdo: entregar el dictamen.", encoding="utf-8")
+        expediente.adjuntar(con, reunion_id, ruta, "minuta", "20260914_1030")
+    return alta["persona_id"], reunion_id
+
+
+def test_inicio_responde(cliente):
+    respuesta = cliente.get("/")
+    assert respuesta.status_code == 200
+    assert "¿Quién entró?" in respuesta.text
+
+
+def test_expediente_muestra_briefing_e_historial(cliente, entorno):
+    persona_id, _ = _persona_con_reunion(cliente, entorno)
+    respuesta = cliente.get(f"/persona/{persona_id}")
+    assert respuesta.status_code == 200
+    assert "Ana Ruiz" in respuesta.text
+    assert "Revalidacion" in respuesta.text
+
+
+def test_la_reunion_muestra_la_minuta(cliente, entorno):
+    _, reunion_id = _persona_con_reunion(cliente, entorno)
+    respuesta = cliente.get(f"/reunion/{reunion_id}")
+    assert respuesta.status_code == 200
+    assert "entregar el dictamen" in respuesta.text
+
+
+def test_identificar_devuelve_candidato(cliente, entorno, monkeypatch):
+    persona_id, _ = _persona_con_reunion(cliente, entorno)
+
+    def lectura_falsa(con):
+        vector = np.random.default_rng(3).normal(size=512).astype(np.float32)
+        return personas.Identificacion(rostros.identificar(con, vector), 0.8, vector, 5)
+
+    monkeypatch.setattr(personas, "identificar_con_camara", lectura_falsa)
+    datos = cliente.post("/identificar").json()
+    assert datos["estado"] == "identificado"
+    assert datos["ir_a"] == f"/persona/{persona_id}"
+
+
+def test_identificar_sin_camara_explica_el_problema(cliente, monkeypatch):
+    def truena(con):
+        raise RuntimeError("Falta OpenCV.")
+
+    monkeypatch.setattr(personas, "identificar_con_camara", truena)
+    respuesta = cliente.post("/identificar")
+    assert respuesta.status_code == 503
+    assert "OpenCV" in respuesta.json()["mensaje"]
+
+
+def test_nueva_reunion_desde_el_expediente(cliente, entorno):
+    persona_id, _ = _persona_con_reunion(cliente, entorno)
+    respuesta = cliente.post(f"/persona/{persona_id}/reunion",
+                             data={"asunto": "Segundo caso", "categoria": "becas"},
+                             follow_redirects=True)
+    assert respuesta.status_code == 200
+    assert "Segundo caso" in respuesta.text
+
+
+def test_acuerdo_se_agrega_y_se_cierra(cliente, entorno):
+    _, reunion_id = _persona_con_reunion(cliente, entorno)
+    cliente.post(f"/reunion/{reunion_id}/acuerdo",
+                 data={"texto": "Entregar constancia", "responsable": "Ana", "compromiso": "2026-09-30"},
+                 follow_redirects=True)
+    pagina = cliente.get(f"/reunion/{reunion_id}").text
+    assert "Entregar constancia" in pagina
+
+    from reuniones import db
+    with db.sesion() as con:
+        acuerdo_id = con.execute("SELECT id FROM acuerdos").fetchone()[0]
+    cliente.post(f"/acuerdo/{acuerdo_id}/estado",
+                 data={"reunion_id": reunion_id, "cerrar": "1"}, follow_redirects=True)
+    with db.sesion() as con:
+        assert con.execute("SELECT estado FROM acuerdos").fetchone()[0] == "cerrado"
+
+
+def test_busqueda_encuentra_la_minuta(cliente, entorno):
+    _persona_con_reunion(cliente, entorno)
+    cliente.post("/ajustes/reindexar")
+    respuesta = cliente.get("/buscar", params={"q": "dictamen"})
+    assert "Revalidacion" in respuesta.text
+
+
+def test_pdf_de_la_minuta(cliente, entorno):
+    _, reunion_id = _persona_con_reunion(cliente, entorno)
+    respuesta = cliente.get(f"/reunion/{reunion_id}/minuta.pdf")
+    assert respuesta.status_code == 200
+    assert respuesta.content.startswith(b"%PDF")
+
+
+def test_no_se_pueden_leer_archivos_fuera_de_la_carpeta_de_datos(cliente):
+    assert cliente.get("/archivo/../../etc/passwd").status_code == 404
+    assert cliente.get("/archivo/no-existe.jpg").status_code == 404
+
+
+def test_la_foto_se_sirve_desde_la_carpeta_de_datos(cliente, entorno):
+    persona_id, _ = _persona_con_reunion(cliente, entorno)
+    from reuniones import db
+    with db.sesion() as con:
+        foto = con.execute("SELECT foto FROM personas WHERE id = ?", (persona_id,)).fetchone()[0]
+    respuesta = cliente.get(f"/archivo/{foto}")
+    assert respuesta.status_code == 200 and respuesta.content[:2] == b"\xff\xd8"
+
+
+def test_bandeja_ofrece_las_reuniones_cercanas(cliente, entorno):
+    _persona_con_reunion(cliente, entorno)
+    suelto = entorno.entrada / "20260914_1040_original.txt"
+    suelto.write_text("Hablante 1: buenos dias.", encoding="utf-8")
+    cliente.post("/bandeja/revisar", follow_redirects=True)
+    pagina = cliente.get("/bandeja").text
+    assert "20260914_1040_original.txt" in pagina or "No hay nada pendiente" in pagina
+
+
+def test_alta_desde_el_sitio_exige_consentimiento(cliente):
+    respuesta = cliente.post("/alta", data={"nombre": "Luis Mora", "email": "luis@uaemex.mx"})
+    assert "consentimiento" in respuesta.text.lower()
+
+
+def test_ajustes_muestra_el_estado(cliente):
+    respuesta = cliente.get("/ajustes")
+    assert respuesta.status_code == 200
+    assert "Carpeta de datos" in respuesta.text

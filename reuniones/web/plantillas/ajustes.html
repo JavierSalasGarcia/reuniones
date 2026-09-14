@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block titulo %}Ajustes{% endblock %}
+{% block contenido %}
+<h1>Ajustes y estado</h1>
+<table class="tabla">
+  <tbody>
+    <tr><th>Carpeta de datos</th><td>{{ resumen.carpeta_datos }}</td></tr>
+    <tr><th>Archivo de configuración</th><td>{{ cfg.ruta_config or 'valores por omisión' }}</td></tr>
+    <tr><th>Personas</th><td>{{ resumen.personas }}</td></tr>
+    <tr><th>Reuniones</th><td>{{ resumen.reuniones }}</td></tr>
+    <tr><th>Minutas / originales</th><td>{{ resumen.minutas }} / {{ resumen.originales }}</td></tr>
+    <tr><th>Fragmentos indexados</th><td>{{ resumen.fragmentos }}</td></tr>
+    <tr><th>Videos del alta guardados</th><td>{{ resumen.videos_guardados }}{% if resumen.proximo_borrado %} · el próximo se borra el {{ resumen.proximo_borrado }}{% endif %}</td></tr>
+    <tr><th>Correo</th><td>{% if correo_listo %}configurado ({{ cfg.correo.servidor }}){% else %}{{ correo_motivo }}{% endif %}</td></tr>
+    <tr><th>Gemini</th><td>{{ 'disponible para redactar respuestas' if hay_gemini else 'sin llave; la búsqueda local funciona igual' }}</td></tr>
+    <tr><th>Umbrales de reconocimiento</th><td>{{ cfg.reconocimiento.umbral_alto }} directo · {{ cfg.reconocimiento.umbral_bajo }} para mostrar candidatos</td></tr>
+  </tbody>
+</table>
+
+<div class="en-linea">
+  <button class="secundario" data-accion="/ajustes/probar-correo">Probar el correo</button>
+  <button class="secundario" data-accion="/ajustes/reindexar">Reconstruir el índice de búsqueda</button>
+  <button class="secundario" data-accion="/ajustes/limpiar-videos">Borrar videos vencidos</button>
+</div>
+<p id="salida" class="apunte"></p>
+
+<h2>Bitácora</h2>
+<ul class="lista chica">
+  {% for b in bitacora %}
+  <li>{{ b.momento|fecha }} · <strong>{{ b.accion }}</strong> · {{ b.detalle }}</li>
+  {% else %}<li class="vacio">Sin movimientos.</li>{% endfor %}
+</ul>
+{% endblock %}
+
+{% block guion %}
+<script>
+document.querySelectorAll('[data-accion]').forEach(b => b.addEventListener('click', async () => {
+  const salida = document.getElementById('salida');
+  salida.textContent = 'Trabajando…';
+  const r = await fetch(b.dataset.accion, {method: 'POST'});
+  const d = await r.json();
+  salida.textContent = d.mensaje || JSON.stringify(d);
+}));
+</script>
+{% endblock %}

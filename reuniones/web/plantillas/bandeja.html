@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block titulo %}Bandeja{% endblock %}
+{% block contenido %}
+<h1>Archivos sin asignar</h1>
+<p class="apunte">Carpeta vigilada: <code>{{ carpeta }}</code>. Los archivos con el formato
+<code>aaaammdd_hhmm_original.txt</code> y <code>aaaammdd_hhmm_minuta.txt</code> se asignan solos
+cuando hay una sola reunión cercana en esa hora.</p>
+<form method="post" action="/bandeja/revisar"><button class="secundario">Revisar la carpeta ahora</button></form>
+
+{% for p in pendientes %}
+<article class="pendiente">
+  <h2>{{ p.pendiente.nombre }}</h2>
+  <p class="meta">{{ p.pendiente.clase }} · detectado {{ p.pendiente.detectado|fecha }} · {{ p.pendiente.motivo }}</p>
+  <pre class="texto chica">{{ p.vista }}</pre>
+  {% if p.candidatas %}
+  <form method="post" action="/bandeja/{{ p.pendiente.id }}/asignar" class="en-linea">
+    <select name="reunion_id">
+      {% for r in p.candidatas %}
+      <option value="{{ r.id }}">{{ r.nombre }} · {{ r.inicio|fecha }} · {{ r.asunto or 'sin asunto' }}</option>
+      {% endfor %}
+    </select>
+    <button>Asignar</button>
+  </form>
+  {% else %}
+  <p class="vacio">No hay reuniones cercanas a esa hora. Crea la reunión desde el expediente de la persona y vuelve aquí.</p>
+  {% endif %}
+  <form method="post" action="/bandeja/{{ p.pendiente.id }}/descartar"><button class="secundario">Descartar</button></form>
+</article>
+{% else %}
+<p class="vacio">No hay nada pendiente.</p>
+{% endfor %}
+{% endblock %}

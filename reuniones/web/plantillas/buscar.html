@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block titulo %}Buscar{% endblock %}
+{% block contenido %}
+<h1>Buscar en minutas y transcripciones</h1>
+<form class="buscador" method="get">
+  <input type="search" name="q" value="{{ q }}" placeholder="¿Qué he dicho antes sobre revalidaciones?" autofocus>
+  <button>Buscar</button>
+  {% if hay_gemini %}<button name="redactar" value="1" class="secundario">Buscar y redactar respuesta</button>{% endif %}
+</form>
+<p class="apunte">La búsqueda ocurre en este equipo. La redacción con Gemini envía a Google solo los
+fragmentos encontrados, y únicamente cuando pulsas ese botón.</p>
+
+{% if aviso %}<p class="aviso">{{ aviso }}</p>{% endif %}
+{% if respuesta %}<blockquote class="respuesta">{{ respuesta }}</blockquote>{% endif %}
+
+{% for h in hallazgos %}
+<article class="hallazgo">
+  <p class="meta"><a href="/persona/{{ h.persona_id }}">{{ h.persona }}</a> · {{ h.inicio|fecha }} ·
+    {{ h.asunto or 'sin asunto' }} · {{ h.clase }} · coincidencia por {{ h.via }}</p>
+  <p>{{ h.texto|recorte(420) }}</p>
+  <a href="/reunion/{{ h.reunion_id }}">Abrir la reunión</a>
+</article>
+{% else %}
+{% if q %}<p class="vacio">Sin resultados.</p>{% endif %}
+{% endfor %}
+{% endblock %}

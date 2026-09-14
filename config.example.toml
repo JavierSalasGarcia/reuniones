@@ -1,0 +1,51 @@
+# Copia este archivo como config.toml y ajusta lo que necesites.
+# Los secretos (contrasena de correo, llave de Gemini) van en .env, no aqui.
+
+[general]
+carpeta_datos = "C:/Reuniones"          # en Windows usa diagonales normales
+dominio_institucional = "uaemex.mx"
+sitio_publico = "https://fingenieria.mx/citas/sa"
+titular = "Subdireccion Academica"
+puerto_web = 8000
+
+[camara]
+indice = 0            # 0 es la camara integrada; 1 suele ser una camara USB
+backend = "dshow"     # en Windows dshow es el mas estable
+ancho = 1280
+alto = 720
+segundos_alta = 6
+segundos_identificacion = 2
+
+[reconocimiento]
+umbral_alto = 0.55    # arriba de esto identifica directo
+umbral_bajo = 0.40    # entre ambos valores muestra candidatos para que confirmes
+candidatos = 3
+
+[retrato]
+altura_cabeza = 0.68       # que tanto del retrato ocupa la cabeza
+ojos_desde_arriba = 0.42
+lado_mayor_px = 900
+alternativas = 2
+
+[video]
+retencion_dias = 7    # el video del alta se borra solo pasados estos dias
+
+[transcripciones]
+ventana_horas_atras = 3
+ventana_minutos_adelante = 30
+
+[correo]
+servidor = "smtp.uaemex.mx"
+puerto = 587
+starttls = true
+usuario = "tu.usuario@uaemex.mx"
+remitente = "tu.usuario@uaemex.mx"
+remitente_nombre = "Subdireccion Academica"
+copia_oculta = ""     # opcional: copia oculta de cada minuta enviada
+
+[busqueda]
+resultados = 8
+
+[privacidad]
+mostrar_nombre_en_pantalla = true
+guardar_video_alta = true

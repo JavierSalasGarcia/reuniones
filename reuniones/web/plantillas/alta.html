@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block titulo %}Alta{% endblock %}
+{% block contenido %}
+<h1>Primera visita</h1>
+<p class="apunte">Al guardar, la cámara graba {{ cfg.camara.segundos_alta }} segundos y de ahí se extrae
+la fotografía. Pide a la persona que mire de frente, con gesto neutro.</p>
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+<form method="post" class="formulario">
+  <label>Nombre completo
+    <input name="nombre" required value="{{ datos.nombre if datos else '' }}">
+  </label>
+  <label>Correo institucional
+    <input name="email" type="email" required placeholder="usuario@{{ cfg.general.dominio_institucional }}"
+           value="{{ datos.email if datos else '' }}">
+  </label>
+  <label>Adscripción o programa
+    <input name="adscripcion" value="{{ datos.adscripcion if datos else '' }}">
+  </label>
+  <label>Tipo
+    <select name="tipo">
+      {% for t in ['alumno', 'profesor', 'administrativo', 'otro'] %}
+      <option value="{{ t }}" {% if datos and datos.tipo == t %}selected{% endif %}>{{ t }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label class="casilla">
+    <input type="checkbox" name="consentimiento" value="1" required>
+    La persona fue informada de que se guardan su fotografía y las minutas de sus reuniones, y lo autoriza.
+  </label>
+  <button class="grande">Grabar y guardar</button>
+</form>
+{% endblock %}

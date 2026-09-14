@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}Expedientes{% endblock %} · {{ cfg.general.titular }}</title>
+  <link rel="stylesheet" href="/estaticos/estilo.css">
+</head>
+<body>
+<header class="barra">
+  <a class="marca" href="/">Expedientes</a>
+  <nav>
+    <a href="/personas">Personas</a>
+    <a href="/buscar">Buscar</a>
+    <a href="/bandeja">Bandeja</a>
+    <a href="/alta">Alta</a>
+    <a href="/ajustes">Ajustes</a>
+  </nav>
+</header>
+<main>
+  {% block contenido %}{% endblock %}
+</main>
+<footer>
+  <span>{{ cfg.general.titular }}</span>
+  <span>Datos en {{ cfg.datos }} · nada sale de este equipo salvo los correos que tú envías</span>
+</footer>
+{% block guion %}{% endblock %}
+</body>
+</html>

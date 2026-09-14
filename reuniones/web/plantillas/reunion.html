@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block titulo %}Reunión {{ reunion.inicio|fecha }}{% endblock %}
+{% block contenido %}
+<p class="migas"><a href="/persona/{{ reunion.persona_id }}">{{ reunion.nombre }}</a> · {{ reunion.inicio|fecha_larga }}</p>
+<h1>{{ reunion.asunto or 'Sin asunto' }}</h1>
+
+<form class="en-linea" method="post" action="/reunion/{{ reunion.id }}/editar">
+  <input name="asunto" value="{{ reunion.asunto }}" placeholder="Asunto">
+  <select name="categoria">
+    {% for c in ['', 'academico', 'administrativo', 'becas', 'disciplinario', 'otro'] %}
+    <option value="{{ c }}" {% if reunion.categoria == c %}selected{% endif %}>{{ c or 'categoría' }}</option>
+    {% endfor %}
+  </select>
+  <button class="secundario">Guardar</button>
+</form>
+
+<div class="documentos">
+  <section>
+    <h2>Minuta</h2>
+    {% if minuta %}<pre class="texto">{{ minuta }}</pre>
+    {% else %}<p class="vacio">Aún no llega la minuta. Suéltala en la carpeta de transcripciones
+      con el nombre <code>aaaammdd_hhmm_minuta.txt</code> o súbela aquí abajo.</p>{% endif %}
+  </section>
+  <section>
+    <h2>Transcripción original</h2>
+    {% if original %}<pre class="texto">{{ original }}</pre>
+    {% else %}<p class="vacio">Sin transcripción original.</p>{% endif %}
+  </section>
+</div>
+
+<div class="columnas">
+  <section>
+    <h2>Acuerdos</h2>
+    {% for a in acuerdos %}
+    <form method="post" action="/acuerdo/{{ a.id }}/estado" class="acuerdo">
+      <input type="hidden" name="reunion_id" value="{{ reunion.id }}">
+      <input type="hidden" name="cerrar" value="{{ '' if a.estado == 'cerrado' else '1' }}">
+      <button class="marca-acuerdo" title="Cambiar estado">{{ '☑' if a.estado == 'cerrado' else '☐' }}</button>
+      <span class="{{ 'cerrado' if a.estado == 'cerrado' else '' }}">{{ a.texto }}
+        <span class="meta">{{ a.responsable or 'sin responsable' }}{% if a.compromiso %} · {{ a.compromiso|fecha }}{% endif %}</span>
+      </span>
+    </form>
+    {% else %}<p class="vacio">Sin acuerdos registrados.</p>{% endfor %}
+    <form method="post" action="/reunion/{{ reunion.id }}/acuerdo" class="formulario compacto">
+      <input name="texto" placeholder="Nuevo acuerdo o compromiso" required>
+      <input name="responsable" placeholder="Responsable">
+      <input name="compromiso" type="date">
+      <button class="secundario">Agregar</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Enviar la minuta</h2>
+    <p class="apunte">Se envía solo la minuta en PDF. La transcripción original nunca sale.</p>
+    {% if correo_listo %}
+    <form method="post" action="/reunion/{{ reunion.id }}/enviar" class="formulario compacto">
+      <input name="destinatario" value="{{ reunion.email }}" type="email">
+      <textarea name="mensaje" rows="3" placeholder="Mensaje (opcional; si lo dejas vacío se usa el texto estándar)"></textarea>
+      <button {% if not archivos %}disabled{% endif %}>Enviar por correo</button>
+    </form>
+    {% else %}<p class="aviso">{{ correo_motivo }}</p>{% endif %}
+    <p><a href="/reunion/{{ reunion.id }}/minuta.pdf">Ver la minuta en PDF</a></p>
+    {% if envios %}
+    <ul class="lista chica">
+      {% for e in envios %}
+      <li>{{ e.enviado|fecha }} · {{ e.destinatario }} · <span class="{{ 'error' if e.estado == 'error' else '' }}">{{ e.estado }}</span></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </section>
+</div>
+
+<section>
+  <h2>Archivos del expediente</h2>
+  <ul class="lista chica">
+    {% for a in archivos %}
+    <li><a href="/archivo/{{ a.ruta }}">{{ a.ruta.split('/')[-1] }}</a> <span class="meta">{{ a.clase }} · {{ a.bytes }} bytes</span></li>
+    {% else %}<li class="vacio">Ninguno todavía.</li>{% endfor %}
+  </ul>
+  <form method="post" action="/reunion/{{ reunion.id }}/adjunto" enctype="multipart/form-data" class="en-linea">
+    <input type="file" name="archivo" required>
+    <select name="clase">
+      <option value="minuta">minuta</option>
+      <option value="original">transcripción original</option>
+      <option value="adjunto">adjunto</option>
+    </select>
+    <button class="secundario">Subir</button>
+  </form>
+</section>
+{% endblock %}

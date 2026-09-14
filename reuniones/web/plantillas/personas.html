@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block titulo %}Personas{% endblock %}
+{% block contenido %}
+<h1>Personas</h1>
+<form class="buscador" method="get">
+  <input type="search" name="q" value="{{ q }}" placeholder="Nombre, correo o adscripción" autofocus>
+  <button>Buscar</button>
+</form>
+{% if filas %}
+<div class="rejilla">
+  {% for p in filas %}
+  <a class="tarjeta" href="/persona/{{ p.id }}">
+    {% if p.foto %}<img src="/archivo/{{ p.foto }}" alt="">{% else %}<div class="sinfoto"></div>{% endif %}
+    <strong>{{ p.nombre }}</strong>
+    <span class="meta">{{ p.email }}</span>
+    <span class="meta">{{ p.reuniones }} reunión(es){% if p.ultima %} · última {{ p.ultima|fecha }}{% endif %}</span>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<p class="vacio">No hay coincidencias. <a href="/alta">Dar de alta a alguien</a>.</p>
+{% endif %}
+{% endblock %}

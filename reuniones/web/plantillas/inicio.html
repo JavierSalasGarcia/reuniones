@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block titulo %}Inicio{% endblock %}
+{% block contenido %}
+<section class="identificar">
+  <div>
+    <h1>¿Quién entró?</h1>
+    <p class="apunte">Dos segundos de cámara. No se guarda ninguna imagen.</p>
+    <button id="btn-identificar" class="grande">Identificar</button>
+    <a class="boton secundario" href="/alta">Es la primera vez</a>
+  </div>
+  <div id="resultado" class="resultado"></div>
+</section>
+
+{% if pendientes %}
+<p class="aviso"><a href="/bandeja">Hay {{ pendientes }} archivo(s) esperando que los asignes a una reunión.</a></p>
+{% endif %}
+
+<div class="columnas">
+  <section>
+    <h2>Últimas reuniones</h2>
+    {% if recientes %}
+    <ul class="lista">
+      {% for r in recientes %}
+      <li>
+        <a href="/reunion/{{ r.id }}">
+          <strong>{{ r.nombre }}</strong>
+          <span class="meta">{{ r.inicio|fecha }}</span>
+        </a>
+        <p>{{ r.asunto or 'Sin asunto' }}</p>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="vacio">Todavía no hay reuniones registradas.</p>{% endif %}
+  </section>
+
+  <section>
+    <h2>Compromisos abiertos</h2>
+    {% if compromisos %}
+    <ul class="lista">
+      {% for c in compromisos %}
+      <li>
+        <a href="/persona/{{ c.persona_id }}"><strong>{{ c.nombre }}</strong></a>
+        <span class="meta">{{ c.compromiso|fecha if c.compromiso else 'sin fecha' }}</span>
+        <p>{{ c.texto|recorte(120) }}</p>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="vacio">Sin pendientes registrados.</p>{% endif %}
+  </section>
+</div>
+
+<p class="pie-datos">
+  {{ resumen.personas }} personas · {{ resumen.reuniones }} reuniones ·
+  {{ resumen.minutas }} minutas · {{ resumen.videos_guardados }} video(s) del alta por borrar
+</p>
+{% endblock %}
+
+{% block guion %}
+<script>
+const boton = document.getElementById('btn-identificar');
+const caja = document.getElementById('resultado');
+boton.addEventListener('click', async () => {
+  boton.disabled = true;
+  boton.textContent = 'Mirando…';
+  caja.innerHTML = '<p class="apunte">Enfoca a la persona.</p>';
+  try {
+    const r = await fetch('/identificar', {method: 'POST'});
+    const d = await r.json();
+    if (d.estado === 'error') { caja.innerHTML = `<p class="error">${d.mensaje}</p>`; }
+    else if (d.estado === 'identificado') {
+      const c = d.candidatos[0];
+      caja.innerHTML = `<p class="exito">Es <strong>${c.nombre}</strong> (${c.porcentaje}%). Abriendo su expediente…</p>`;
+      window.location = d.ir_a;
+    } else if (d.candidatos.length) {
+      caja.innerHTML = '<p>¿Es alguna de estas personas?</p><div class="candidatos">' +
+        d.candidatos.map(c => `<a class="tarjeta" href="/persona/${c.id}">
+            ${c.foto ? `<img src="${c.foto}" alt="">` : '<div class="sinfoto"></div>'}
+            <strong>${c.nombre}</strong><span class="meta">${c.porcentaje}%</span></a>`).join('') +
+        '</div><p class="apunte">Si no es ninguna, <a href="/alta">dala de alta</a>.</p>';
+    } else {
+      caja.innerHTML = '<p>No reconozco a esta persona. <a href="/alta">Darla de alta</a> o <a href="/personas">buscarla por nombre</a>.</p>';
+    }
+  } catch (e) {
+    caja.innerHTML = `<p class="error">No se pudo usar la cámara: ${e}</p>`;
+  }
+  boton.disabled = false;
+  boton.textContent = 'Identificar';
+});
+</script>
+{% endblock %}
