@@ -14,6 +14,9 @@ la parte pública en `publico/`, que se sube al hosting y atiende los turnos y l
 y el kiosco en `kiosco/`, que es la Raspberry Pi del monitor de la entrada. Cada carpeta
 tiene sus instrucciones de instalación.
 
+La guía completa de instalación de los tres dispositivos, con su configuración y sus
+pruebas, está en `INSTALACION.md`. Lo que sigue es el resumen para la laptop.
+
 ## Instalación en Windows
 
 Necesitas Python 3.11 o más reciente. Desde la carpeta del proyecto:
