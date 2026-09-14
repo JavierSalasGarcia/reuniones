@@ -1,0 +1,10 @@
+[Unit]
+Description=Revisa cada cinco minutos si el monitor debe estar encendido
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

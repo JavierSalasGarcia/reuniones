@@ -63,12 +63,15 @@ class Transcripciones:
 
 @dataclass
 class Correo:
-    servidor: str = "smtp.uaemex.mx"
+    """Salida de correo. Todo sale por el SMTP de fingenieria.mx."""
+
+    servidor: str = "mail.fingenieria.mx"
     puerto: int = 587
     starttls: bool = True
     usuario: str = ""
     remitente: str = ""
     remitente_nombre: str = ""
+    responder_a: str = ""       # tu correo institucional, para que te contesten a ti
     copia_oculta: str = ""
 
 
@@ -93,6 +96,15 @@ class Nube:
 
 
 @dataclass
+class Kiosco:
+    """Respaldo en la red local para el monitor de la entrada."""
+
+    habilitado: bool = True
+    puerto: int = 8010
+    escuchar: str = "0.0.0.0"   # solo se sirve la pantalla de turnos, nada mas
+
+
+@dataclass
 class Privacidad:
     mostrar_nombre_en_pantalla: bool = True
     guardar_video_alta: bool = True
@@ -109,6 +121,7 @@ class Config:
     correo: Correo = field(default_factory=Correo)
     busqueda: Busqueda = field(default_factory=Busqueda)
     nube: Nube = field(default_factory=Nube)
+    kiosco: Kiosco = field(default_factory=Kiosco)
     privacidad: Privacidad = field(default_factory=Privacidad)
     ruta_config: Path | None = None
 

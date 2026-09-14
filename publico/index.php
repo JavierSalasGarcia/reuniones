@@ -166,6 +166,10 @@ if ($seccion === 'estado.json') {
             'nombre' => $t['nombre_publico'] ?: u_nombre_corto($t['nombre']),
             'hora' => $t['estimado'] ? u_hora($t['estimado']) : null,
         ], $espera),
+        // El monitor de la entrada usa el horario para prender y apagar la pantalla.
+        'horarios' => array_map(fn($h) => [
+            'dia' => (int) $h['dia'], 'inicio' => $h['inicio'], 'fin' => $h['fin'],
+        ], horarios((int) $dep['id'])),
     ]);
     exit;
 }

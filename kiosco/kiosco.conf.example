@@ -1,0 +1,22 @@
+# Configuracion del monitor de la entrada.  Se instala en /etc/reuniones-kiosco.conf
+# Cambia sa por la clave de tu dependencia y la direccion IP por la de tu laptop.
+
+# Pantalla publica en internet (la que se muestra normalmente).
+URL_NUBE="https://fingenieria.mx/citas/sa/pantalla"
+
+# Direccion que se consulta para saber si el sitio responde.
+URL_PRUEBA="https://fingenieria.mx/citas/sa/estado.json"
+
+# Respaldo en la red local: la laptop sirviendo la ultima fila conocida.
+# Conviene que la laptop tenga direccion IP fija en la red de la facultad.
+URL_LOCAL="http://192.168.1.50:8010/"
+
+# Cada cuantos segundos se revisa si hay internet.
+INTERVALO=30
+
+# Si no hay forma de consultar el horario, se usan estas horas.
+HORA_ENCENDIDO="07:30"
+HORA_APAGADO="20:00"
+
+# Minutos de gracia antes de abrir y despues de cerrar.
+MARGEN=20

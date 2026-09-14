@@ -1,0 +1,6 @@
+[Unit]
+Description=Prende o apaga el monitor segun el horario de atencion
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/energia.sh

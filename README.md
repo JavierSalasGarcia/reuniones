@@ -9,10 +9,10 @@ Todo corre en la laptop. Las fotografías, los vectores faciales, las transcripc
 minutas nunca salen del equipo; lo único que sale es el correo que tú decides enviar y, si
 activas esa opción, los fragmentos que Gemini necesita para redactar una respuesta de búsqueda.
 
-El proyecto tiene tres etapas. Las dos primeras están construidas: el núcleo local
-(`reuniones/`) y la parte pública de turnos y citas (`publico/`, que se sube al hosting).
-Falta el kiosco de la Raspberry Pi, que será un navegador en pantalla completa apuntando
-a la vista que la parte pública ya expone.
+El sistema tiene tres piezas: el núcleo local en `reuniones/`, que corre en tu laptop;
+la parte pública en `publico/`, que se sube al hosting y atiende los turnos y las citas;
+y el kiosco en `kiosco/`, que es la Raspberry Pi del monitor de la entrada. Cada carpeta
+tiene sus instrucciones de instalación.
 
 ## Instalación en Windows
 
@@ -74,6 +74,11 @@ persona escribió; si es su primera vez, el sistema te lleva al alta con sus dat
 capturados. La pestaña **Agenda** publica tu horario semanal, aparta ratos para juntas y
 genera el QR para imprimir.
 
+El monitor de la entrada muestra la vista pública de turnos con el código QR. Si se cae
+el internet, la Raspberry cambia sola al respaldo que sirve tu laptop en la red local
+(puerto 8010, que expone únicamente esa pantalla) y regresa al sitio público cuando la
+conexión vuelve. Fuera del horario que publicaste, apaga el monitor.
+
 La hora estimada de cada turno se recalcula sola: se encadenan los turnos con un colchón
 de dos minutos, ninguno invade una reunión agendada ni los diez minutos previos, y lo que
 ya no cabe en el horario del día deja la fila cerrada. A quien se le recorre la hora de
@@ -105,6 +110,13 @@ Cada persona guarda un vector facial promedio y hasta ocho vectores adicionales 
 va aprendiendo de sus visitas. Por arriba de 0.55 de similitud identifica directo; entre 0.40 y
 0.55 muestra los tres candidatos más parecidos para que confirmes; por debajo lo declara
 desconocido. La búsqueda por nombre siempre está disponible como respaldo.
+
+## Correo
+
+Todo el correo del sistema sale por el SMTP de `fingenieria.mx`: los códigos de
+verificación y los avisos de turno desde el hosting, y las minutas desde tu laptop. En
+`config.toml` puedes poner tu correo institucional en `responder_a` para que las
+respuestas de las personas te lleguen a tu buzón de siempre.
 
 ## Privacidad
 

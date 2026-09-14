@@ -35,13 +35,15 @@ ventana_horas_atras = 3
 ventana_minutos_adelante = 30
 
 [correo]
-servidor = "smtp.uaemex.mx"
+# Todo el correo del sistema sale por el SMTP de fingenieria.mx.
+servidor = "mail.fingenieria.mx"
 puerto = 587
 starttls = true
-usuario = "tu.usuario@uaemex.mx"
-remitente = "tu.usuario@uaemex.mx"
+usuario = "citas@fingenieria.mx"
+remitente = "citas@fingenieria.mx"
 remitente_nombre = "Subdireccion Academica"
-copia_oculta = ""     # opcional: copia oculta de cada minuta enviada
+responder_a = "tu.usuario@uaemex.mx"   # a donde te contestan las personas
+copia_oculta = ""                      # opcional: copia oculta de cada minuta enviada
 
 [busqueda]
 resultados = 8
@@ -51,6 +53,11 @@ resultados = 8
 url = "https://fingenieria.mx/citas"
 dependencia = "sa"          # la clave de tu oficina: sa, dir, ...
 latido_segundos = 60
+
+[kiosco]
+# Respaldo de la pantalla del monitor cuando se cae el internet.
+habilitado = true
+puerto = 8010
 
 [privacidad]
 mostrar_nombre_en_pantalla = true

@@ -1,0 +1,34 @@
+/* Monitor de la entrada, respaldo servido por la laptop en la red local. */
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: #0c1a2b; color: #fff;
+  font: 16px/1.5 "Segoe UI", system-ui, sans-serif;
+}
+.rejilla { display: grid; grid-template-columns: 1.4fr 1fr; height: 100vh; }
+.actual {
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  padding: 40px; text-align: center;
+}
+.etiqueta { text-transform: uppercase; letter-spacing: 3px; color: #7fa9cf; margin: 0 0 10px; font-size: 20px; }
+.folio { font-size: 18vw; line-height: .9; font-weight: 800; margin: 0; }
+.nombre { font-size: 3.4vw; margin: 18px 0 0; color: #dbe9f6; }
+.lado { background: #102944; padding: 30px; display: flex; flex-direction: column; gap: 18px; }
+.lista { list-style: none; padding: 0; margin: 0; flex: 1; }
+.lista li {
+  display: grid; grid-template-columns: 2.5rem 1fr auto; gap: 12px; align-items: center;
+  font-size: 1.6vw; padding: 10px 0; border-bottom: 1px solid #1d3d61;
+}
+.folio-chico { color: #7fa9cf; font-weight: 700; }
+.hora { color: #9fc3e0; }
+.qr { background: #fff; color: #10233a; border-radius: 14px; padding: 16px; text-align: center; }
+.qr img { width: 220px; max-width: 100%; }
+.qr p { margin: 8px 0 0; font-size: 15px; }
+.qr .url { color: #46617d; font-weight: 600; }
+.reloj { display: flex; justify-content: space-between; align-items: baseline; font-size: 2.4vw; margin: 0; color: #7fa9cf; }
+.marca-local { font-size: 14px; color: #5b83a8; }
+
+@media (max-width: 760px) {
+  .rejilla { grid-template-columns: 1fr; height: auto; }
+  .folio { font-size: 32vw; }
+  .nombre, .lista li { font-size: 5vw; }
+}

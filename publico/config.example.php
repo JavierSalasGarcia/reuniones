@@ -19,17 +19,17 @@ return [
     //   php -r "echo password_hash('tu contraseña', PASSWORD_DEFAULT);"
     'admin_hash' => '',
 
-    // Correos de la fila (codigo de verificacion, confirmaciones y avisos).
-    // Salen desde un buzon del hosting; la minuta se envia aparte desde la
-    // laptop con la cuenta institucional.
+    // Correo de la fila (codigo de verificacion, confirmaciones y avisos).
+    // Sale por SMTP desde el buzon de fingenieria.mx, igual que el correo que
+    // manda la laptop.
     'correo' => [
-        'modo' => 'mail',                 // mail | smtp | bitacora
-        'remitente' => 'citas@fingenieria.mx',
-        'remitente_nombre' => 'Agenda de la Facultad',
-        'responder_a' => '',
+        'modo' => 'smtp',                 // smtp | mail | bitacora
         'servidor' => 'mail.fingenieria.mx',
         'puerto' => 587,
-        'usuario' => '',
+        'usuario' => 'citas@fingenieria.mx',
         'clave' => '',
+        'remitente' => 'citas@fingenieria.mx',
+        'remitente_nombre' => 'Agenda de la Facultad',
+        'responder_a' => '',              // opcional: tu correo institucional
     ],
 ];

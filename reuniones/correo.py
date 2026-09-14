@@ -102,6 +102,8 @@ def enviar_minuta(con: sqlite3.Connection, reunion_id: int, destinatario: str | 
     correo = EmailMessage()
     correo["From"] = _remitente()
     correo["To"] = para
+    if cfg_correo := config.actual().correo.responder_a:
+        correo["Reply-To"] = cfg_correo   # las respuestas llegan a tu buzon institucional
     if cfg.correo.copia_oculta:
         correo["Bcc"] = cfg.correo.copia_oculta
     correo["Subject"] = titulo

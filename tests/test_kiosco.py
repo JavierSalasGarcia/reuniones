@@ -1,0 +1,108 @@
+"""El respaldo de la pantalla y el encendido del monitor de la entrada."""
+
+import json
+import subprocess
+from datetime import datetime, timedelta
+from pathlib import Path
+
+import httpx
+import pytest
+from fastapi.testclient import TestClient
+
+from reuniones import nube
+from reuniones.web import kiosco as vista_kiosco
+
+RAIZ = Path(__file__).resolve().parent.parent
+ENERGIA = RAIZ / "kiosco" / "energia.sh"
+
+
+@pytest.fixture
+def pantalla(entorno, monkeypatch):
+    monkeypatch.setenv("REUNIONES_NUBE_TOKEN", "token-de-prueba")
+    entorno.nube.url = "https://fingenieria.mx/citas"
+    entorno.nube.dependencia = "sa"
+    nube._cache.datos, nube._cache.momento = {}, 0.0
+    with TestClient(vista_kiosco.app) as cliente:
+        yield cliente
+    nube._cache.datos, nube._cache.momento = {}, 0.0
+
+
+def test_la_pantalla_local_muestra_la_fila(pantalla, monkeypatch):
+    from tests.test_nube import ESTADO, enchufar
+
+    enchufar(monkeypatch, lambda p: httpx.Response(200, json=ESTADO))
+    pagina = pantalla.get("/").text
+    assert "Ana Ruiz" in pagina, "el turno en curso aparece grande"
+    assert "Luis Mora" in pagina
+
+
+def test_sin_conexion_conserva_lo_ultimo_y_lo_advierte(pantalla, monkeypatch):
+    from tests.test_nube import ESTADO, enchufar
+
+    enchufar(monkeypatch, lambda p: httpx.Response(200, json=ESTADO))
+    pantalla.get("/estado.json")
+
+    def truena(peticion):
+        raise httpx.ConnectError("sin red")
+
+    nube._cache.momento = 0.0
+    enchufar(monkeypatch, truena)
+    datos = pantalla.get("/estado.json").json()
+    assert datos["desfasado"] is True
+    assert datos["actual"]["folio"] == 1, "sigue mostrando lo último que se supo"
+    assert "conexión" in datos["mensaje"]
+
+
+def test_la_pantalla_local_no_expone_expedientes(pantalla):
+    assert pantalla.get("/personas").status_code == 404
+    assert pantalla.get("/persona/1").status_code == 404
+    assert pantalla.get("/buscar").status_code == 404
+
+
+def _decidir(tmp_path, horarios) -> str:
+    """Corre el guion de encendido con un horario simulado."""
+    estado = tmp_path / "estado.json"
+    estado.write_text(json.dumps({"horarios": horarios}), encoding="utf-8")
+    conf = tmp_path / "kiosco.conf"
+    conf.write_text(f'URL_PRUEBA="file://{estado}"\nMARGEN=20\n', encoding="utf-8")
+    salida = subprocess.run(["bash", str(ENERGIA), "--consultar"],
+                            env={"REUNIONES_CONF": str(conf), "PATH": "/usr/bin:/bin"},
+                            capture_output=True, text=True, timeout=30)
+    return salida.stdout.strip()
+
+
+def test_el_monitor_se_enciende_dentro_del_horario(tmp_path):
+    ahora = datetime.now()
+    hoy = ahora.isoweekday()
+    horario = [{"dia": hoy,
+                "inicio": (ahora - timedelta(hours=1)).strftime("%H:%M"),
+                "fin": (ahora + timedelta(hours=1)).strftime("%H:%M")}]
+    assert _decidir(tmp_path, horario) == "1"
+
+
+def test_el_monitor_se_apaga_fuera_del_horario(tmp_path):
+    ahora = datetime.now()
+    hoy = ahora.isoweekday()
+    inicio = ahora - timedelta(hours=5)
+    horario = [{"dia": hoy, "inicio": inicio.strftime("%H:%M"),
+                "fin": (inicio + timedelta(hours=1)).strftime("%H:%M")}]
+    assert _decidir(tmp_path, horario) == "0"
+
+
+def test_el_monitor_se_apaga_los_dias_sin_horario(tmp_path):
+    otro_dia = (datetime.now().isoweekday() % 7) + 1
+    assert _decidir(tmp_path, [{"dia": otro_dia, "inicio": "00:00", "fin": "23:59"}]) == "0"
+
+
+def test_sin_horario_publicado_usa_las_horas_fijas(tmp_path):
+    conf = tmp_path / "kiosco.conf"
+    ahora = datetime.now()
+    conf.write_text(
+        'URL_PRUEBA="file:///no-existe.json"\n'
+        f'HORA_ENCENDIDO="{(ahora - timedelta(hours=2)):%H:%M}"\n'
+        f'HORA_APAGADO="{(ahora + timedelta(hours=2)):%H:%M}"\nMARGEN=0\n',
+        encoding="utf-8")
+    salida = subprocess.run(["bash", str(ENERGIA), "--consultar"],
+                            env={"REUNIONES_CONF": str(conf), "PATH": "/usr/bin:/bin"},
+                            capture_output=True, text=True, timeout=30)
+    assert salida.stdout.strip() == "1"

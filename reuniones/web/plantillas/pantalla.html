@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Turnos · {{ titular }}</title>
+<link rel="stylesheet" href="/estatico/pantalla.css">
+</head>
+<body>
+<div class="rejilla">
+  <section class="actual">
+    <p class="etiqueta">Atendiendo</p>
+    <p class="folio" id="folio">{{ fila.actual.folio if fila.actual else '—' }}</p>
+    <p class="nombre" id="nombre">
+      {%- if fila.actual -%}
+        {{ (fila.actual.nombre_publico or fila.actual.nombre).split()[:2]|join(' ') }}
+      {%- elif fila.abierta -%}En espera
+      {%- else -%}{{ mensaje or 'Sin atención en este momento' }}{%- endif -%}
+    </p>
+  </section>
+
+  <aside class="lado">
+    <p class="etiqueta">Siguen</p>
+    <ul class="lista" id="siguientes">
+      {% for t in fila.espera[:5] %}
+      <li><span class="folio-chico">{{ t.folio }}</span>
+        <span>{{ (t.nombre_publico or t.nombre).split()[:2]|join(' ') }}</span>
+        <span class="hora">{{ t.estimado[11:16] if t.estimado else '—' }}</span></li>
+      {% endfor %}
+    </ul>
+
+    <div class="qr">
+      <img src="/qr.png" alt="Código QR" onerror="this.style.display='none'">
+      <p>Escanea para tomar turno o agendar</p>
+      {% if url_publica %}<p class="url">{{ url_publica.replace('https://', '') }}</p>{% endif %}
+    </div>
+
+    <p class="reloj"><span id="reloj">{{ hora }}</span>
+      <span class="marca-local" id="marca">red local</span></p>
+  </aside>
+</div>
+
+<script>
+async function refrescar() {
+  try {
+    const datos = await (await fetch('/estado.json', {cache: 'no-store'})).json();
+    document.getElementById('folio').textContent = datos.actual ? datos.actual.folio : '—';
+    document.getElementById('nombre').textContent = datos.actual ? datos.actual.nombre
+      : (datos.abierta ? 'En espera' : datos.mensaje || 'Sin atención en este momento');
+    document.getElementById('reloj').textContent = datos.ahora;
+    document.getElementById('marca').textContent = datos.desfasado
+      ? 'red local · sin conexión con el sitio' : 'red local';
+    document.getElementById('siguientes').innerHTML = datos.siguientes.map(t =>
+      `<li><span class="folio-chico">${t.folio}</span><span>${t.nombre}</span>` +
+      `<span class="hora">${t.hora || '—'}</span></li>`).join('');
+  } catch (e) { /* si la laptop no responde, se queda lo ultimo pintado */ }
+}
+setInterval(refrescar, 5000);
+</script>
+</body>
+</html>

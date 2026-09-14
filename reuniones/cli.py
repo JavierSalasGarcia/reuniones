@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import sys
 import webbrowser
+from pathlib import Path
 
 import typer
 
@@ -101,12 +102,30 @@ def servidor(puerto: int = typer.Option(0, "--puerto", "-p"),
     """Levanta el sitio local y vigila la carpeta de transcripciones."""
     import uvicorn
 
+    from .web import kiosco
+
     cfg = config.actual()
     cfg.crear_carpetas()
     puerto = puerto or cfg.general.puerto_web
+    kiosco.servir_en_hilo()
+    if cfg.kiosco.habilitado:
+        typer.echo(f"Respaldo de la pantalla en la red local: puerto {cfg.kiosco.puerto}")
     if abrir:
         webbrowser.open(f"http://localhost:{puerto}/")
     uvicorn.run("reuniones.web.app:app", host="127.0.0.1", port=puerto, log_level="warning")
+
+
+@app.command()
+def qr(destino: str = typer.Option("", "--destino", "-d")) -> None:
+    """Genera el codigo QR de tu pagina publica para imprimirlo."""
+    from . import nube
+
+    try:
+        ruta = nube.generar_qr(Path(destino) if destino else None)
+    except nube.ErrorNube as error:
+        typer.secho(str(error), fg=typer.colors.RED)
+        raise typer.Exit(1)
+    typer.echo(f"{ruta}\n{nube.url_publica()}")
 
 
 @app.command()
@@ -175,7 +194,7 @@ def estado() -> None:
 
 @app.command("probar-correo")
 def probar_correo() -> None:
-    """Verifica el acceso al servidor SMTP institucional."""
+    """Verifica el acceso al servidor de correo de fingenieria.mx."""
     try:
         typer.secho(correo.probar(), fg=typer.colors.GREEN)
     except correo.ErrorCorreo as error:

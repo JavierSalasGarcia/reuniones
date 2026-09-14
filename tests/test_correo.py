@@ -106,3 +106,10 @@ def test_sin_minuta_no_hay_nada_que_enviar(con, correo_listo):
     reunion_id = expediente.crear_reunion(con, pid, "Sin papeles")
     with pytest.raises(ValueError, match="minuta"):
         correo.enviar_minuta(con, reunion_id)
+
+
+def test_las_respuestas_llegan_al_correo_institucional(con, correo_listo):
+    correo_listo.correo.responder_a = "javier.salas@uaemex.mx"
+    reunion_id = _reunion(con, correo_listo)
+    correo.enviar_minuta(con, reunion_id)
+    assert SMTPFalso.enviados[0]["Reply-To"] == "javier.salas@uaemex.mx"

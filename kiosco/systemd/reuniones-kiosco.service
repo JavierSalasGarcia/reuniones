@@ -1,0 +1,13 @@
+[Unit]
+Description=Pantalla de turnos en el monitor de la entrada
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/pantalla.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target
