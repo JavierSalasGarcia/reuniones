@@ -19,6 +19,16 @@ return [
     // que es lo que conviene si quieres el expediente disponible desde aqui.
     'minutas_dias' => 0,
 
+    // Aviso al celular (y de ahi al reloj) cuando alguien se forma en la cola.
+    // modo: ntfy | bitacora | off.  El tema de cada dependencia se define en
+    // el panel de administracion y funciona como contrasena: quien lo conozca
+    // puede ver los avisos, asi que conviene que sea largo y al azar.
+    'push' => [
+        'modo' => 'ntfy',
+        'servidor' => 'https://ntfy.sh',
+        'token' => '',                    // solo si usas una cuenta de ntfy con clave
+    ],
+
     // Contraseña del panel de administracion. Generala con:
     //   php -r "echo password_hash('tu contraseña', PASSWORD_DEFAULT);"
     'admin_hash' => '',

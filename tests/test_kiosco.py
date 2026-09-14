@@ -94,15 +94,29 @@ def test_el_monitor_se_apaga_los_dias_sin_horario(tmp_path):
     assert _decidir(tmp_path, [{"dia": otro_dia, "inicio": "00:00", "fin": "23:59"}]) == "0"
 
 
-def test_sin_horario_publicado_usa_las_horas_fijas(tmp_path):
+def _con_horas_fijas(tmp_path, encendido: str, apagado: str) -> str:
+    """Corre el guion sin horario publicado, con las horas de respaldo."""
     conf = tmp_path / "kiosco.conf"
-    ahora = datetime.now()
     conf.write_text(
         'URL_PRUEBA="file:///no-existe.json"\n'
-        f'HORA_ENCENDIDO="{(ahora - timedelta(hours=2)):%H:%M}"\n'
-        f'HORA_APAGADO="{(ahora + timedelta(hours=2)):%H:%M}"\nMARGEN=0\n',
+        f'HORA_ENCENDIDO="{encendido}"\nHORA_APAGADO="{apagado}"\nMARGEN=0\n',
         encoding="utf-8")
     salida = subprocess.run(["bash", str(ENERGIA), "--consultar"],
                             env={"REUNIONES_CONF": str(conf), "PATH": "/usr/bin:/bin"},
                             capture_output=True, text=True, timeout=30)
-    assert salida.stdout.strip() == "1"
+    return salida.stdout.strip()
+
+
+def test_sin_horario_publicado_usa_las_horas_fijas(tmp_path):
+    # Ventana que cubre el dia entero: sea la hora que sea, toca encendida.
+    assert _con_horas_fijas(tmp_path, "00:01", "23:58") == "1"
+
+
+def test_las_horas_fijas_tambien_apagan(tmp_path):
+    ahora = datetime.now()
+    # Una ventana de una hora que con seguridad no contiene a la actual.
+    fuera = (ahora + timedelta(hours=6)).replace(minute=0)
+    if fuera.date() != ahora.date():
+        fuera = ahora.replace(hour=0, minute=0) + timedelta(hours=2)
+    assert _con_horas_fijas(tmp_path, f"{fuera:%H:%M}",
+                            f"{fuera + timedelta(minutes=59):%H:%M}") == "0"

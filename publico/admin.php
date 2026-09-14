@@ -53,9 +53,10 @@ if ($metodo === 'POST' && csrf_valido()) {
         } else {
             $token = u_token(20);
             consulta('INSERT INTO dependencias (clave, nombre, titular, correo_titular, dominio_correo, '
-                . 'token_hash, disponible, creado) VALUES (?, ?, ?, ?, ?, ?, 0, ?)',
+                . 'token_hash, push_tema, disponible, creado) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)',
                 [$clave, $nombre, $titular, u_email($_POST['correo'] ?? ''),
-                 u_limpio($_POST['dominio'] ?? 'uaemex.mx', 80), hash('sha256', $token), ahora_texto()]);
+                 u_limpio($_POST['dominio'] ?? 'uaemex.mx', 80), hash('sha256', $token),
+                 $clave . '-' . u_token(8), ahora_texto()]);
             $token_nuevo = $token;
             $mensaje = "Dependencia «{$clave}» creada. Copia el token: solo se muestra una vez.";
             evento(null, 'alta-dependencia', $clave);
@@ -65,13 +66,14 @@ if ($metodo === 'POST' && csrf_valido()) {
     if ($accion === 'editar') {
         $id = (int) ($_POST['id'] ?? 0);
         consulta('UPDATE dependencias SET nombre = ?, titular = ?, correo_titular = ?, dominio_correo = ?, '
-            . 'duracion_max = ?, colchon_turno = ?, colchon_reunion = ?, minutos_cita = ?, activa = ? '
-            . 'WHERE id = ?',
+            . 'duracion_max = ?, colchon_turno = ?, colchon_reunion = ?, minutos_cita = ?, '
+            . 'push_tema = ?, push_detalle = ?, activa = ? WHERE id = ?',
             [u_limpio($_POST['nombre'] ?? '', 120), u_limpio($_POST['titular'] ?? '', 120),
              u_email($_POST['correo'] ?? ''), u_limpio($_POST['dominio'] ?? 'uaemex.mx', 80),
              max(1, (int) ($_POST['duracion_max'] ?? 10)), max(0, (int) ($_POST['colchon_turno'] ?? 2)),
              max(0, (int) ($_POST['colchon_reunion'] ?? 10)),
              u_limpio($_POST['minutos_cita'] ?? '20,30,45', 40),
+             u_limpio($_POST['push_tema'] ?? '', 80), empty($_POST['push_detalle']) ? 0 : 1,
              empty($_POST['activa']) ? 0 : 1, $id]);
         $mensaje = 'Datos actualizados.';
     }

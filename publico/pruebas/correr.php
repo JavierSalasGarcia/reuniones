@@ -80,5 +80,6 @@ require __DIR__ . '/util_prueba.php';
 require __DIR__ . '/flujo_prueba.php';
 require __DIR__ . '/minutas_prueba.php';
 require __DIR__ . '/jornada_prueba.php';
+require __DIR__ . '/push_prueba.php';
 
 exit(Pruebas::resumen());

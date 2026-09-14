@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS dependencias (
   colchon_turno     INT          NOT NULL DEFAULT 2,
   colchon_reunion   INT          NOT NULL DEFAULT 10,
   minutos_cita      VARCHAR(40)  NOT NULL DEFAULT '20,30,45',
+  push_tema         VARCHAR(80)  NOT NULL DEFAULT '',   -- canal de avisos al celular
+  push_detalle      TINYINT(1)   NOT NULL DEFAULT 1,    -- 0 = avisar sin nombre ni asunto
   activa            TINYINT(1)   NOT NULL DEFAULT 1,
   creado            DATETIME     NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -36,6 +36,11 @@
                value="<?= (int) $fila['colchon_reunion'] ?>"></label>
         <label>Duraciones de reunión <input name="minutos_cita" value="<?= u_escapar($fila['minutos_cita']) ?>"></label>
       </div>
+      <label>Tema de avisos al celular (ntfy)
+        <input name="push_tema" value="<?= u_escapar($fila['push_tema']) ?>"></label>
+      <label class="casilla"><input type="checkbox" name="push_detalle" value="1"
+             <?= (int) $fila['push_detalle'] === 1 ? 'checked' : '' ?>>
+        Incluir nombre y asunto en el aviso</label>
       <label class="casilla"><input type="checkbox" name="activa" value="1"
              <?= (int) $fila['activa'] === 1 ? 'checked' : '' ?>> Activa</label>
       <button class="secundario">Guardar</button>

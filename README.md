@@ -139,6 +139,14 @@ va aprendiendo de sus visitas. Por arriba de 0.55 de similitud identifica direct
 0.55 muestra los tres candidatos más parecidos para que confirmes; por debajo lo declara
 desconocido. La búsqueda por nombre siempre está disponible como respaldo.
 
+## Avisos en el reloj
+
+Cuando alguien se forma en la cola, el servidor publica un aviso que llega al celular y
+que el reloj repite vibrando, con el nombre, el asunto y la hora aproximada en que le
+tocaría. La instalación está en `RELOJ.md`; el tema del canal se configura por
+dependencia en el panel de administración y puede enviarse sin nombre ni asunto cuando
+el caso lo amerite.
+
 ## Correo
 
 Todo el correo sale del servidor de `fingenieria.mx`, porque el servidor institucional

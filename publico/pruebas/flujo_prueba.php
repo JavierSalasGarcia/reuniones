@@ -27,9 +27,12 @@ function base_de_prueba(array $ajustes = []): array
         ['sa', 'Subdirección Académica', 'Javier Salas', 'uaemex.mx',
          hash('sha256', 'secreto'), $ajustes['disponible'] ?? 1, 10, 2, 10, '20,30,45', ahora_texto()]);
 
-    $dia = (int) (new DateTimeImmutable('now'))->format('N');
-    consulta('INSERT INTO horarios (dependencia_id, dia, inicio, fin) VALUES (1, ?, ?, ?)',
-        [$dia, $ajustes['inicio'] ?? '00:00', $ajustes['fin'] ?? '23:59']);
+    // El horario se siembra toda la semana para que las pruebas no dependan
+    // de la hora real a la que se corran.
+    for ($dia = 1; $dia <= 7; $dia++) {
+        consulta('INSERT INTO horarios (dependencia_id, dia, inicio, fin) VALUES (1, ?, ?, ?)',
+            [$dia, $ajustes['inicio'] ?? '00:00', $ajustes['fin'] ?? '23:59']);
+    }
 
     return dependencia('sa');
 }

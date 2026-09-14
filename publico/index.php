@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/lib/datos.php';
 require_once __DIR__ . '/lib/plantilla.php';
 require_once __DIR__ . '/lib/correo.php';
+require_once __DIR__ . '/lib/push.php';
 
 date_default_timezone_set((string) (config()['zona'] ?? 'America/Mexico_City'));
 
@@ -321,6 +322,7 @@ if ($seccion === 'codigo' && $metodo === 'POST') {
             }
         }
         correo_turno($dep, $turno, $estimado, url_absoluta('t/' . $turno['token']));
+        push_turno_nuevo($dep, $turno, $estimado);   // el reloj vibra en tu muñeca
         u_redirigir(ruta('t/' . $turno['token']));
     }
 

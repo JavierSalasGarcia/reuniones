@@ -55,6 +55,11 @@ function u_nombre_corto(string $nombre): string
     return $partes[0] . ' ' . $partes[1];
 }
 
+function u_sin_acentos(string $texto): string
+{
+    return iconv('UTF-8', 'ASCII//TRANSLIT', $texto) ?: $texto;
+}
+
 function u_escapar(?string $texto): string
 {
     return htmlspecialchars((string) $texto, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
