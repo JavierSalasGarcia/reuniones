@@ -58,5 +58,6 @@ día quieres que ni eso salga, ntfy se puede instalar en el propio hosting.
 La segunda etapa ya está escrita: una aplicación que se instala en el reloj y muestra en
 vivo a quién atiendes con el tiempo corriendo, quién sigue y cuántos esperan, vibrando
 cuando alguien se forma. Lleva su propia llave de solo lectura, distinta a la de la
-laptop, para que con ella no se pueda llamar turnos ni cancelar nada. Las instrucciones
-para compilarla e instalarla están en `reloj/LEEME.md`.
+laptop, para que con ella no se pueda llamar turnos ni cancelar nada. Trae también el mosaico, la tarjeta que se ve deslizando desde la carátula sin abrir
+nada. Las instrucciones para compilarla e instalarla, pensadas para quien nunca lo ha
+hecho, están en `reloj/INSTALAR-WINDOWS.md`, y la referencia técnica en `reloj/LEEME.md`.

@@ -148,9 +148,10 @@ se configura por dependencia en el panel de administración y puede enviarse sin
 asunto cuando el caso lo amerite.
 
 Además, en `reloj/` está la aplicación para el Galaxy Watch7, que muestra en la muñeca a
-quién atiendes con el tiempo corriendo, quién sigue y cuántos esperan. Se instala desde
-Android Studio siguiendo `reloj/LEEME.md`, y usa una llave de solo lectura distinta a la
-de la laptop: con ella no se puede llamar turnos ni cancelar nada.
+quién atiendes con el tiempo corriendo, quién sigue y cuántos esperan. Incluye el mosaico que se
+ve deslizando desde la carátula. Se instala desde Android Studio siguiendo
+`reloj/INSTALAR-WINDOWS.md`, y usa una llave de solo lectura distinta a la de la laptop:
+con ella no se puede llamar turnos ni cancelar nada.
 
 ## Correo
 

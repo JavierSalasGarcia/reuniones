@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Imagen que el reloj muestra al elegir el mosaico en la lista. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="96"
+    android:viewportHeight="96">
+    <path
+        android:fillColor="#10233A"
+        android:pathData="M0,0h96v96h-96z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M20,28h56v6h-56z" />
+    <path
+        android:fillColor="#7EE0A3"
+        android:pathData="M20,42h36v10h-36z" />
+    <path
+        android:fillColor="#9FC3E0"
+        android:pathData="M20,60h48v5h-48z" />
+    <path
+        android:fillColor="#9FC3E0"
+        android:pathData="M20,70h30v5h-30z" />
+</vector>

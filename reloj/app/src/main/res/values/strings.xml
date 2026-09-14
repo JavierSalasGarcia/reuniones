@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Fila</string>
+    <string name="mosaico_descripcion">Quién sigue y cuánto falta de la atención en curso</string>
 </resources>

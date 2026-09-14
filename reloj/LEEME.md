@@ -85,8 +85,19 @@ Si Gradle se queja de que falta el wrapper, compila desde el botón Run de Andro
 que usa su propia distribución. Si se queja de versiones, acepta el asistente de
 actualización que ofrece el propio Android Studio.
 
-## Lo que falta
+## El mosaico
 
-Un mosaico, de esos que se ven deslizando desde la carátula sin abrir la aplicación,
-para no tener que entrar. Se puede agregar encima de esto una vez que la aplicación
-compile y la estés usando.
+Además de la aplicación, el proyecto trae el mosaico: la tarjeta que aparece deslizando
+el dedo hacia la izquierda desde la carátula, sin abrir nada. Muestra lo mismo en
+resumen, a quién atiendes con lo que le falta, quién sigue y cuántos esperan, y al
+tocarla abre la aplicación. El sistema la refresca aproximadamente cada minuto, así que
+el dato puede ir un poco atrás del de la aplicación, que se actualiza cada veinte
+segundos mientras la miras.
+
+Se agrega desde el reloj manteniendo el dedo sobre la carátula, deslizando hasta el final
+de las tarjetas y tocando el botón de agregar, donde aparece «Fila».
+
+## Instalación paso a paso
+
+Si nunca has compilado una aplicación de Android, sigue `INSTALAR-WINDOWS.md`, que va
+desde descargar Android Studio hasta agregar el mosaico, sin dar nada por sabido.
