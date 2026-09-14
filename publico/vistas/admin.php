@@ -45,12 +45,21 @@
              <?= (int) $fila['activa'] === 1 ? 'checked' : '' ?>> Activa</label>
       <button class="secundario">Guardar</button>
     </form>
-    <form method="post" onsubmit="return confirm('El token actual dejará de funcionar. ¿Continuar?')">
-      <?= campo_csrf() ?>
-      <input type="hidden" name="accion" value="token">
-      <input type="hidden" name="id" value="<?= (int) $fila['id'] ?>">
-      <button class="secundario">Regenerar token</button>
-    </form>
+    <div class="en-linea">
+      <form method="post" onsubmit="return confirm('El token actual dejará de funcionar. ¿Continuar?')">
+        <?= campo_csrf() ?>
+        <input type="hidden" name="accion" value="token">
+        <input type="hidden" name="id" value="<?= (int) $fila['id'] ?>">
+        <button class="secundario">Regenerar token de la laptop</button>
+      </form>
+      <form method="post" onsubmit="return confirm('Habrá que reinstalar la app del reloj. ¿Continuar?')">
+        <?= campo_csrf() ?>
+        <input type="hidden" name="accion" value="token-reloj">
+        <input type="hidden" name="id" value="<?= (int) $fila['id'] ?>">
+        <button class="secundario">
+          <?= $fila['token_reloj_hash'] ? 'Regenerar' : 'Generar' ?> llave del reloj</button>
+      </form>
+    </div>
   </article>
   <?php endforeach; ?>
 

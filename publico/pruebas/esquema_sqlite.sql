@@ -3,6 +3,7 @@ CREATE TABLE dependencias (
   id INTEGER PRIMARY KEY AUTOINCREMENT, clave TEXT NOT NULL UNIQUE, nombre TEXT NOT NULL,
   titular TEXT NOT NULL, correo_titular TEXT NOT NULL DEFAULT '',
   dominio_correo TEXT NOT NULL DEFAULT 'uaemex.mx', token_hash TEXT NOT NULL DEFAULT '',
+  token_reloj_hash TEXT NOT NULL DEFAULT '',
   disponible INTEGER NOT NULL DEFAULT 0, mensaje TEXT NOT NULL DEFAULT '',
   atendiendo_turno INTEGER, duracion_max INTEGER NOT NULL DEFAULT 10,
   colchon_turno INTEGER NOT NULL DEFAULT 2, colchon_reunion INTEGER NOT NULL DEFAULT 10,

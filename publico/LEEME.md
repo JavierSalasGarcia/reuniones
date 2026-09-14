@@ -30,7 +30,8 @@ servirse por web; solo se bajan por la API con el token de la dependencia.
 Si ya tenías la base creada de una instalación anterior, importa además
 `migraciones/001_minutas.sql`, que agrega la tabla donde viven las minutas, y
 `migraciones/002_jornadas.sql`, que agrega la de las jornadas diarias, y
-`migraciones/003_push.sql`, que agrega el canal de avisos al celular.
+`migraciones/003_push.sql`, que agrega el canal de avisos al celular, y
+`migraciones/004_token_reloj.sql`, que agrega la llave de solo lectura del reloj.
 
 Si tu hosting no tiene `mod_rewrite`, todo sigue funcionando con la forma larga de las
 direcciones: `https://fingenieria.mx/citas/index.php?r=sa`.

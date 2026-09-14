@@ -98,7 +98,7 @@ Si tienes PHP por línea de comandos, desde la carpeta del proyecto completo:
 php publico/pruebas/correr.php
 ```
 
-Debe responder «172 comprobaciones correctas». Esas pruebas no tocan tu base de datos
+Debe responder «201 comprobaciones correctas». Esas pruebas no tocan tu base de datos
 real ni mandan correos; usan una base en memoria.
 
 En el navegador, comprueba que `https://fingenieria.mx/citas/sa` muestra el formulario
@@ -175,7 +175,7 @@ Las pruebas automáticas no necesitan cámara ni internet:
 .venv\Scripts\python.exe -m pytest
 ```
 
-Debe responder «107 passed». Después, las pruebas a mano. Con el servidor corriendo,
+Debe responder «110 passed». Después, las pruebas a mano. Con el servidor corriendo,
 verifica el estado general:
 
 ```
@@ -288,6 +288,17 @@ journalctl --user -u reuniones-kiosco -f
 
 Para salir del modo kiosco y usar el escritorio, `systemctl --user stop
 reuniones-kiosco.service`; para volver, `start`.
+
+---
+
+## 3b. Reloj Galaxy Watch7
+
+Dos piezas independientes. Los avisos que vibran en la muñeca no requieren instalar nada
+en el reloj y se configuran siguiendo `RELOJ.md`: instalas ntfy en el celular, te
+suscribes al tema que aparece en el panel de administración y pruebas con una línea de
+`curl`. La aplicación con la pantalla en vivo se compila en tu laptop con Android Studio
+siguiendo `reloj/LEEME.md`, y antes necesitas pulsar «Generar llave del reloj» en el
+panel, que es una llave de solo lectura distinta a la de la laptop.
 
 ---
 

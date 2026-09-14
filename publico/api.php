@@ -20,12 +20,22 @@ function api_token(): string
     return (string) ($_GET['token'] ?? '');
 }
 
-function api_dependencia(): array
+/**
+ * El reloj trae su propia llave, que solo sirve para leer su vista. Asi, si se
+ * pierde el reloj, se regenera esa llave sin tocar la de la laptop, y con ella
+ * nadie puede llamar turnos ni cancelar nada.
+ */
+function api_dependencia(string $accion = ''): array
 {
     $clave = (string) ($_GET['d'] ?? '');
     $dep = $clave === '' ? null : dependencia($clave);
     $token = api_token();
-    if ($dep === null || $token === '' || !hash_equals((string) $dep['token_hash'], hash('sha256', $token))) {
+    if ($dep === null || $token === '') {
+        u_json(['error' => 'no autorizado'], 401);
+        exit;
+    }
+
+    if (!token_permite($dep, $token, $accion)) {
         u_json(['error' => 'no autorizado'], 401);
         exit;
     }
@@ -103,8 +113,8 @@ function guardar_estimados(array $estado): void
     }
 }
 
-$dep = api_dependencia();
 $accion = (string) ($_GET['accion'] ?? 'estado');
+$dep = api_dependencia($accion);
 $cuerpo = api_cuerpo();
 
 if ($accion === 'estado') {

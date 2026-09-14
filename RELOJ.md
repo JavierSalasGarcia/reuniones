@@ -4,14 +4,12 @@ Este documento cubre la primera etapa: que tu reloj vibre y te muestre quién ac
 formarse en la cola, sin instalar nada en el reloj. La segunda etapa, una aplicación
 propia de Wear OS con la pantalla en vivo, va aparte.
 
-## Primero, el modelo de tu reloj
+## Tu reloj
 
-En el reloj, entra a Ajustes, baja hasta «Acerca del reloj» y anota el nombre y el número
-de modelo, que empieza con `SM-`. Desde el celular también lo ves abriendo Galaxy
-Wearable, en Ajustes del reloj y luego Acerca del reloj. Ese número decide si tu reloj
-corre Wear OS, donde sí se pueden instalar aplicaciones propias, o el viejo Tizen de los
-modelos anteriores, donde el camino es distinto. Para lo de esta primera etapa da igual
-cuál sea: funciona en los dos, porque el reloj solo repite lo que llega al celular.
+Es un Galaxy Watch7 de 40 milímetros, modelo SM-L310, que corre Wear OS 5. Eso permite
+las dos cosas: los avisos que se describen aquí, que no requieren instalar nada, y la
+aplicación propia con la pantalla en vivo, que está en la carpeta `reloj` con sus
+instrucciones en `reloj/LEEME.md`.
 
 ## Cómo funciona
 
@@ -55,10 +53,10 @@ salen de tus servidores. Si prefieres que no, en el panel de administración des
 la duración y la hora; para saber de quién se trata miras la fila en tu laptop. Si algún
 día quieres que ni eso salga, ntfy se puede instalar en el propio hosting.
 
-## Qué falta
+## La aplicación del reloj
 
-La segunda etapa es una aplicación instalada en el reloj, con una pantalla y un mosaico
-que muestren en vivo quién sigue y cuánto lleva la reunión actual, sin depender de que
-te llegue una notificación. Esa parte necesita que compiles el proyecto en tu laptop con
-Android Studio y que actives el modo desarrollador del reloj, y el primer paso es que me
-digas el número de modelo.
+La segunda etapa ya está escrita: una aplicación que se instala en el reloj y muestra en
+vivo a quién atiendes con el tiempo corriendo, quién sigue y cuántos esperan, vibrando
+cuando alguien se forma. Lleva su propia llave de solo lectura, distinta a la de la
+laptop, para que con ella no se pueda llamar turnos ni cancelar nada. Las instrucciones
+para compilarla e instalarla están en `reloj/LEEME.md`.

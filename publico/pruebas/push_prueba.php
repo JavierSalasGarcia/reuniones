@@ -65,3 +65,27 @@ Pruebas::caso('el modo apagado deja todo en silencio', function () {
     Pruebas::igual(false, push_configurado($dep));
     Pruebas::igual(false, push_enviar($dep, 'Hola', 'Mundo'));
 });
+
+Pruebas::caso('la llave del reloj solo abre la vista del reloj', function () {
+    base_de_prueba();
+    consulta('UPDATE dependencias SET token_hash = ?, token_reloj_hash = ? WHERE id = 1',
+        [hash('sha256', 'de-la-laptop'), hash('sha256', 'del-reloj')]);
+    $dep = dependencia('sa');
+
+    Pruebas::cierto(token_permite($dep, 'de-la-laptop', 'estado'), 'la laptop puede todo');
+    Pruebas::cierto(token_permite($dep, 'de-la-laptop', 'reloj'));
+    Pruebas::cierto(token_permite($dep, 'del-reloj', 'reloj'));
+    Pruebas::igual(false, token_permite($dep, 'del-reloj', 'estado'));
+    Pruebas::igual(false, token_permite($dep, 'del-reloj', 'turno'), 'el reloj no llama turnos');
+    Pruebas::igual(false, token_permite($dep, 'inventado', 'reloj'));
+    Pruebas::igual(false, token_permite($dep, '', 'reloj'));
+});
+
+Pruebas::caso('sin llave de reloj configurada nadie entra por esa puerta', function () {
+    base_de_prueba();
+    consulta('UPDATE dependencias SET token_hash = ?, token_reloj_hash = ? WHERE id = 1',
+        [hash('sha256', 'de-la-laptop'), '']);
+    $dep = dependencia('sa');
+    Pruebas::igual(false, token_permite($dep, '', 'reloj'));
+    Pruebas::cierto(token_permite($dep, 'de-la-laptop', 'reloj'));
+});

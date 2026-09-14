@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS dependencias (
   correo_titular    VARCHAR(160) NOT NULL DEFAULT '',
   dominio_correo    VARCHAR(80)  NOT NULL DEFAULT 'uaemex.mx',
   token_hash        VARCHAR(64)  NOT NULL DEFAULT '',
+  token_reloj_hash  VARCHAR(64)  NOT NULL DEFAULT '',   -- llave de solo lectura del reloj
   disponible        TINYINT(1)   NOT NULL DEFAULT 0,
   mensaje           VARCHAR(255) NOT NULL DEFAULT '',
   atendiendo_turno  INT          NULL,

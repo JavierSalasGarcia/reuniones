@@ -200,6 +200,24 @@ function leyenda_atencion(array $estado): string
     }
 }
 
+/**
+ * Que puede hacer quien trae este token. El reloj lleva una llave aparte que
+ * solo abre su propia vista: si se pierde, se regenera sin tocar la de la
+ * laptop, y con ella nadie puede llamar turnos ni cancelar nada.
+ */
+function token_permite(array $dep, string $token, string $accion): bool
+{
+    if ($token === '') {
+        return false;
+    }
+    $huella = hash('sha256', $token);
+    if (hash_equals((string) ($dep['token_hash'] ?? ''), $huella)) {
+        return true;
+    }
+    $delReloj = (string) ($dep['token_reloj_hash'] ?? '');
+    return $delReloj !== '' && $accion === 'reloj' && hash_equals($delReloj, $huella);
+}
+
 // --- jornada del dia ------------------------------------------------------
 //
 // La jornada dice a que hora llegas, hasta que hora atiendes y hasta que hora

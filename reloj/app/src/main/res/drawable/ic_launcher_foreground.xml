@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tres personas en fila, dibujadas como vectores para no cargar imagenes. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,30m-9,0a9,9 0,1 1,18 0a9,9 0,1 1,-18 0" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M40,46h28a6,6 0,0 1,6 6v12h-40v-12a6,6 0,0 1,6 -6z" />
+    <path
+        android:fillColor="#7FA9CF"
+        android:pathData="M34,74m-6,0a6,6 0,1 1,12 0a6,6 0,1 1,-12 0" />
+    <path
+        android:fillColor="#7FA9CF"
+        android:pathData="M54,74m-6,0a6,6 0,1 1,12 0a6,6 0,1 1,-12 0" />
+    <path
+        android:fillColor="#7FA9CF"
+        android:pathData="M74,74m-6,0a6,6 0,1 1,12 0a6,6 0,1 1,-12 0" />
+</vector>

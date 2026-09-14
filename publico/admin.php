@@ -85,6 +85,15 @@ if ($metodo === 'POST' && csrf_valido()) {
         $mensaje = 'Token regenerado. El anterior dejó de servir.';
         evento($id, 'token', 'regenerado');
     }
+
+    if ($accion === 'token-reloj') {
+        $id = (int) ($_POST['id'] ?? 0);
+        $token_nuevo = u_token(20);
+        consulta('UPDATE dependencias SET token_reloj_hash = ? WHERE id = ?',
+            [hash('sha256', $token_nuevo), $id]);
+        $mensaje = 'Llave del reloj regenerada. Ponla en local.properties y vuelve a instalar la app.';
+        evento($id, 'token-reloj', 'regenerado');
+    }
 }
 
 render('admin', [

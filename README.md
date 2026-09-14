@@ -139,13 +139,18 @@ va aprendiendo de sus visitas. Por arriba de 0.55 de similitud identifica direct
 0.55 muestra los tres candidatos más parecidos para que confirmes; por debajo lo declara
 desconocido. La búsqueda por nombre siempre está disponible como respaldo.
 
-## Avisos en el reloj
+## El reloj
 
 Cuando alguien se forma en la cola, el servidor publica un aviso que llega al celular y
 que el reloj repite vibrando, con el nombre, el asunto y la hora aproximada en que le
-tocaría. La instalación está en `RELOJ.md`; el tema del canal se configura por
-dependencia en el panel de administración y puede enviarse sin nombre ni asunto cuando
-el caso lo amerite.
+tocaría. Eso no necesita instalar nada en el reloj y se explica en `RELOJ.md`; el canal
+se configura por dependencia en el panel de administración y puede enviarse sin nombre ni
+asunto cuando el caso lo amerite.
+
+Además, en `reloj/` está la aplicación para el Galaxy Watch7, que muestra en la muñeca a
+quién atiendes con el tiempo corriendo, quién sigue y cuántos esperan. Se instala desde
+Android Studio siguiendo `reloj/LEEME.md`, y usa una llave de solo lectura distinta a la
+de la laptop: con ella no se puede llamar turnos ni cancelar nada.
 
 ## Correo
 

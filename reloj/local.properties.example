@@ -1,0 +1,11 @@
+# Copia este archivo como local.properties y llena los datos.
+# Nunca se sube al repositorio: lleva la llave del reloj.
+#
+# Android Studio agrega solo la linea sdk.dir la primera vez que abre el proyecto.
+
+fila.sitio=https://fingenieria.mx/citas
+fila.dependencia=sa
+
+# Llave de solo lectura, la que genera el panel de administracion con el boton
+# "Generar llave del reloj". No es la de la laptop.
+fila.token=
