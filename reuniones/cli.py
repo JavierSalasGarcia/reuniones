@@ -116,6 +116,143 @@ def servidor(puerto: int = typer.Option(0, "--puerto", "-p"),
 
 
 @app.command()
+def abrir(cierre: str = typer.Option("", "--cierre", "-c", help="Hora en que terminas hoy, 15:00."),
+          tope: str = typer.Option("", "--tope", "-t", help="Última hora para formarse en la cola."),
+          mensaje: str = typer.Option("", "--mensaje", "-m")) -> None:
+    """Llegaste a la oficina: abre la atención de hoy."""
+    from . import nube
+
+    try:
+        jornada = nube.abrir(cierre, tope, mensaje=mensaje)["jornada"]
+    except nube.ErrorNube as error:
+        typer.secho(str(error), fg=typer.colors.RED)
+        raise typer.Exit(1)
+    typer.secho(f"Atención abierta {jornada['apertura']}–{jornada['cierre']}.",
+                fg=typer.colors.GREEN, bold=True)
+    if jornada.get("tope"):
+        typer.echo(f"  La gente puede formarse hasta las {jornada['tope']}.")
+    else:
+        typer.echo("  La cola se cierra sola cuando un turno más ya no alcanza antes del cierre.")
+
+
+@app.command()
+def cerrar(nota: str = typer.Option("", "--nota", "-n",
+                                    help="Lo que verá la gente en la pantalla.")) -> None:
+    """Termina la atención de hoy. Quien siga formado ya no será atendido."""
+    from . import nube
+
+    try:
+        estado = nube.estado(forzar=True)
+    except nube.ErrorNube as error:
+        typer.secho(str(error), fg=typer.colors.RED)
+        raise typer.Exit(1)
+    esperando = [t for t in estado.get("turnos", []) if t.get("estado") == "espera"]
+    if esperando:
+        typer.secho(f"Hay {len(esperando)} persona(s) formada(s).", fg=typer.colors.YELLOW)
+        typer.echo("  Si ya no las vas a atender, usa:  reunion cancelar-cola")
+        if not typer.confirm("¿Cerrar de todos modos?", default=False):
+            raise typer.Exit()
+    try:
+        nube.cerrar(nota)
+    except nube.ErrorNube as error:
+        typer.secho(str(error), fg=typer.colors.RED)
+        raise typer.Exit(1)
+    typer.secho("Atención cerrada.", fg=typer.colors.GREEN)
+
+
+@app.command()
+def pausar(hasta: str = typer.Option("", "--hasta", "-h", help="Hora en que vuelves, 13:00."),
+           minutos: int = typer.Option(0, "--minutos", "-m"),
+           motivo: str = typer.Option("No disponible", "--motivo")) -> None:
+    """Un rato sin atender: clase, videoconferencia, comida o trabajo concentrado."""
+    from datetime import datetime
+
+    from . import nube
+
+    if not hasta and not minutos:
+        typer.secho("Indica --hasta 13:00 o --minutos 45.", fg=typer.colors.RED)
+        raise typer.Exit(1)
+    if hasta and len(hasta) == 5:
+        hasta = f"{datetime.now():%Y-%m-%d} {hasta}:00"
+    try:
+        resultado = nube.pausar(hasta, minutos, motivo)
+    except nube.ErrorNube as error:
+        typer.secho(str(error), fg=typer.colors.RED)
+        raise typer.Exit(1)
+    regreso = str(resultado.get("hasta", ""))[11:16]
+    typer.secho(f"No disponible hasta {regreso}. {motivo}", fg=typer.colors.GREEN)
+    typer.echo("  Los turnos que caían en ese rato se recorrieron solos.")
+
+
+@app.command("cancelar-cola")
+def cancelar_cola(motivo: str = typer.Option("", "--motivo", "-m",
+                                             help="Se lo verá cada persona en su correo."),
+                  cerrar_dia: bool = typer.Option(True, "--cerrar/--seguir-abierto"),
+                  confirmar: bool = typer.Option(False, "--si", help="No preguntar.")) -> None:
+    """Emergencia: cancela a todos los formados y les avisa por correo."""
+    from . import nube
+
+    try:
+        estado = nube.estado(forzar=True)
+    except nube.ErrorNube as error:
+        typer.secho(str(error), fg=typer.colors.RED)
+        raise typer.Exit(1)
+    esperando = [t for t in estado.get("turnos", []) if t.get("estado") in ("espera", "llamado")]
+    if not esperando:
+        typer.echo("No hay nadie formado.")
+        if cerrar_dia:
+            nube.cerrar(motivo)
+            typer.echo("Atención cerrada.")
+        raise typer.Exit()
+
+    for turno in esperando:
+        typer.echo(f"  {turno['folio']}  {turno['nombre']} <{turno['email']}>")
+    if not confirmar and not typer.confirm(
+            f"¿Cancelar {len(esperando)} turno(s) y avisarles por correo?", default=False):
+        raise typer.Exit()
+
+    try:
+        resultado = nube.cancelar_cola(motivo, cerrar_dia)
+    except nube.ErrorNube as error:
+        typer.secho(str(error), fg=typer.colors.RED)
+        raise typer.Exit(1)
+    typer.secho(f"{resultado['cancelados']} turno(s) cancelados y avisados.",
+                fg=typer.colors.GREEN, bold=True)
+
+
+@app.command()
+def jornada(fecha: str = typer.Argument("", help="aaaa-mm-dd; vacío es hoy."),
+            apertura: str = typer.Option("", "--apertura", "-a"),
+            cierre: str = typer.Option("", "--cierre", "-c"),
+            tope: str = typer.Option("", "--tope", "-t"),
+            cancelar: bool = typer.Option(False, "--cancelar", help="Ese día no habrá atención."),
+            nota: str = typer.Option("", "--nota", "-n")) -> None:
+    """Consulta o deja lista la jornada de un día, hoy o cualquiera por venir."""
+    from datetime import datetime
+
+    from . import nube
+
+    fecha = fecha or f"{datetime.now():%Y-%m-%d}"
+    try:
+        if apertura or cierre or tope or cancelar or nota:
+            datos = nube.configurar_jornada(fecha, apertura, cierre,
+                                            tope if tope else None,
+                                            "cancelada" if cancelar else "", nota)["jornada"]
+        else:
+            datos = nube.jornada(fecha)
+    except nube.ErrorNube as error:
+        typer.secho(str(error), fg=typer.colors.RED)
+        raise typer.Exit(1)
+    if not datos:
+        typer.echo(f"{fecha}: sin atención programada.")
+        raise typer.Exit()
+    typer.echo(f"{fecha}  {datos['apertura']}–{datos['cierre']}  ({datos['estado']})")
+    typer.echo(f"  Registro en la cola hasta: {datos['tope'] or 'mientras alcance el horario'}")
+    if datos.get("nota"):
+        typer.echo(f"  Nota: {datos['nota']}")
+
+
+@app.command()
 def qr(destino: str = typer.Option("", "--destino", "-d")) -> None:
     """Genera el codigo QR de tu pagina publica para imprimirlo."""
     from . import nube

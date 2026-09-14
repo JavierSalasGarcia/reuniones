@@ -9,23 +9,47 @@
 {% else %}
   {% if error %}<p class="aviso">{{ error }} (se muestra lo último que se supo)</p>{% endif %}
 
-  <section>
-    <form method="post" action="/turnos/disponible" class="en-linea">
-      <label class="casilla">
-        <input type="checkbox" name="disponible" value="1" {% if fila.disponible %}checked{% endif %}
-               onchange="this.form.submit()">
-        {% if fila.disponible %}Disponible: la fila está abierta{% else %}No disponible{% endif %}
-      </label>
-      <input name="mensaje" placeholder="Mensaje para la pantalla cuando no estés"
-             value="{{ datos.dependencia.mensaje if datos.dependencia else '' }}">
-      <button class="secundario">Guardar</button>
-    </form>
+  {% if aviso %}<p class="exito">{{ aviso }}</p>{% endif %}
+
+  <section class="jornada">
+    <p class="leyenda {{ fila.atencion }}">{{ fila.leyenda }}</p>
     <p class="apunte">
-      {% if fila.abierta %}Quien tome turno ahora sería atendido cerca de las {{ fila.proximo_hueco[11:16] if fila.proximo_hueco else '—' }}.
-      {% else %}La fila está cerrada para nuevos turnos.{% endif %}
-      · <a href="{{ url_pantalla }}" target="_blank">Pantalla del monitor</a>
+      Jornada de hoy: {{ fila.jornada.apertura or '—' }} a {{ fila.jornada.cierre or '—' }} ·
+      registro en la cola hasta {{ fila.jornada.tope or 'que alcance el horario' }} ·
+      {% if fila.abierta %}quien se forme ahora entraría cerca de las
+        {{ fila.proximo_hueco[11:16] if fila.proximo_hueco else '—' }}
+      {% else %}la cola está cerrada{% endif %}
+    </p>
+
+    {% if fila.atencion in ['pausada', 'cerrada', 'sin-atencion'] %}
+    <form method="post" action="/turnos/abrir" class="en-linea">
+      <label>Cierro a las <input type="time" name="cierre" value="{{ fila.jornada.cierre or '15:00' }}"></label>
+      <label>Registro hasta <input type="time" name="tope" value="{{ fila.jornada.tope or '' }}"></label>
+      <button>Llegué, abrir atención</button>
+    </form>
+    {% else %}
+    <form method="post" action="/turnos/pausar" class="en-linea">
+      <label>No disponible hasta <input type="time" name="hasta" required></label>
+      <input name="motivo" placeholder="Clase, videoconferencia, comida…" value="No disponible">
+      <button class="secundario">Pausar</button>
+    </form>
+    <form method="post" action="/turnos/cerrar" class="en-linea">
+      <input name="nota" placeholder="Nota para la pantalla (opcional)">
+      <button class="secundario">Terminar la jornada</button>
+    </form>
+    {% endif %}
+
+    <form method="post" action="/turnos/cancelar-cola" class="en-linea"
+          onsubmit="return confirm('Se cancelan todos los turnos y se les avisa por correo. ¿Continuar?')">
+      <input name="motivo" placeholder="Motivo que verá la gente en su correo">
+      <button class="secundario">Cancelar la cola (emergencia)</button>
+    </form>
+
+    <p class="apunte">
+      <a href="{{ url_pantalla }}" target="_blank">Pantalla del monitor</a>
       · <a href="{{ url_publica }}" target="_blank">Página pública</a>
       · <a href="/qr.png" target="_blank">Código QR</a>
+      · <a href="/agenda">Agenda y jornadas</a>
     </p>
   </section>
 
@@ -69,6 +93,23 @@
       Si es su primera vez, el sistema te lleva al alta con sus datos ya escritos.</p>
     {% else %}<p class="vacio">Nadie esperando. {{ fila.atendidos }} atendido(s) hoy.</p>{% endif %}
   </section>
+
+  {% if fila.confirmadas %}
+  <section>
+    <h2>Citas confirmadas</h2>
+    {% for c in fila.confirmadas %}
+    <article class="solicitud">
+      <p><strong>{{ c.nombre }}</strong> <span class="meta">{{ c.email }}</span></p>
+      <p>{{ c.asunto }} · {{ (c.confirmada or c.propuesta)[:16] }} · {{ c.minutos }} minutos</p>
+      <form method="post" action="/cita/{{ c.id }}/cancelar" class="en-linea"
+            onsubmit="return confirm('Se le avisa por correo con el enlace para reagendar. ¿Cancelar?')">
+        <input name="motivo" placeholder="Motivo (le llega por correo)">
+        <button class="secundario">Cancelar la cita</button>
+      </form>
+    </article>
+    {% endfor %}
+  </section>
+  {% endif %}
 
   <section>
     <h2>Solicitudes de reunión ({{ fila.citas|length }})</h2>

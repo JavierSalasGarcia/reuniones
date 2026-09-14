@@ -154,8 +154,12 @@ if ($seccion === 'estado.json') {
     $espera = array_slice($estado['espera'], 0, 6);
     u_json([
         'ahora' => $estado['ahora']->format('H:i'),
-        'disponible' => (int) $dep['disponible'] === 1,
+        'disponible' => $estado['atencion'] === 'atendiendo',
         'abierta' => $estado['abierta'],
+        'atencion' => $estado['atencion'],
+        'leyenda' => leyenda_atencion($estado),
+        'disponible_hasta' => u_hora($estado['disponible_hasta']),
+        'no_disponible_hasta' => u_hora($estado['no_disponible_hasta']),
         'mensaje' => $estado['motivo_cierre'],
         'actual' => $estado['actual'] ? [
             'folio' => (int) $estado['actual']['folio'],

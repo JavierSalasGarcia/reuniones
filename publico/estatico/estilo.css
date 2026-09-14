@@ -113,3 +113,16 @@ main.pantalla { max-width: none; height: 100vh; padding: 0; }
   .kiosco-folio { font-size: 32vw; }
   .kiosco-nombre, .kiosco-lista li { font-size: 5vw; }
 }
+
+/* Leyenda de disponibilidad */
+.leyenda { font-weight: 700; margin: 10px 0; }
+.leyenda.atendiendo { color: var(--bien); }
+.leyenda.ocupado, .leyenda.pausada { color: #8a5a12; }
+.leyenda.cerrada, .leyenda.sin-atencion { color: var(--alerta); }
+.kiosco-leyenda {
+  margin: 14px 0 0; font-size: 2.2vw; font-weight: 700; color: #9fc3e0;
+  border-top: 1px solid #1d3d61; padding-top: 14px;
+}
+.kiosco-leyenda.atendiendo { color: #7ee0a3; }
+.kiosco-leyenda.ocupado, .kiosco-leyenda.pausada { color: #f0c98a; }
+.kiosco-leyenda.cerrada, .kiosco-leyenda.sin-atencion { color: #f0a08a; }

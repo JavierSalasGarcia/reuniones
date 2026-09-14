@@ -61,6 +61,11 @@ def rechazar_cita(cita: dict, motivo: str) -> dict:
     return nube.cita(int(cita["id"]), "rechazar", None, motivo)
 
 
+def cancelar_cita(cita: dict, motivo: str) -> dict:
+    """Cancela una cita ya confirmada; a la persona le llega el aviso y el enlace."""
+    return nube.cita(int(cita["id"]), "cancelar", None, motivo)
+
+
 def guardar_adjuntos(con: sqlite3.Connection, cita: dict) -> list[Path]:
     """Baja los adjuntos de una cita a la carpeta local de la persona."""
     cfg = config.actual()
@@ -105,6 +110,25 @@ def resumen_fila(datos: dict) -> dict:
         "citas": datos.get("citas", []),
         "bloqueos": datos.get("bloqueos", []),
         "abierta": bool(datos.get("abierta")),
-        "disponible": bool(datos.get("dependencia", {}).get("disponible")),
+        "disponible": datos.get("atencion") == "atendiendo",
+        "atencion": datos.get("atencion", ""),
+        "jornada": datos.get("jornada") or {},
+        "leyenda": leyenda(datos),
+        "confirmadas": datos.get("citas_aprobadas", []),
         "proximo_hueco": datos.get("proximo_hueco"),
     }
+
+
+def leyenda(datos: dict) -> str:
+    """La misma frase que ve la gente: «Disponible hasta 12:00» y sus variantes."""
+    atencion = datos.get("atencion", "")
+    jornada = datos.get("jornada") or {}
+    if atencion == "atendiendo":
+        hasta = (datos.get("disponible_hasta") or "")[11:16]
+        return f"Disponible hasta {hasta}" if hasta else "Disponible"
+    if atencion == "ocupado":
+        hasta = (datos.get("no_disponible_hasta") or "")[11:16]
+        return f"No disponible hasta {hasta}" if hasta else "No disponible en este momento"
+    if atencion == "pausada":
+        return f"Disponible a partir de las {jornada.get('apertura', '')}".strip()
+    return datos.get("motivo_cierre") or "Sin atención"

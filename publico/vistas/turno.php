@@ -2,8 +2,11 @@
   <h1><?= u_escapar($dep['nombre']) ?></h1>
   <p class="meta"><?= u_escapar($dep['titular']) ?></p>
 
+  <p class="leyenda <?= $estado['atencion'] ?>"><?= u_escapar(leyenda_atencion($estado)) ?></p>
+
   <?php if ($estado['abierta']): ?>
     <p class="estado bien">Fila abierta.
+      <?php if ($estado['tope']): ?>Puedes formarte hasta las <?= u_hora($estado['tope']) ?>.<?php endif; ?>
       <?php if ($estado['proximo_hueco']): ?>
       Si tomas turno ahora, te tocaría alrededor de las
       <strong><?= u_hora($estado['proximo_hueco']) ?></strong>.

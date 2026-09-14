@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -412,19 +412,53 @@ def ver_turnos(request: Request, con: sqlite3.Connection = Depends(base_datos)):
     return _pagina(request, "turnos.html",
                    listo=listo,
                    error=error,
+                   aviso=request.query_params.get("aviso", ""),
+                   hoy=f"{datetime.now():%Y-%m-%d}",
                    fila=turnos.resumen_fila(datos),
                    datos=datos,
                    url_publica=nube.url_publica() if listo else "",
                    url_pantalla=nube.url_publica("pantalla") if listo else "")
 
 
-@app.post("/turnos/disponible")
-def cambiar_disponible(disponible: str = Form(""), mensaje: str = Form("")):
+@app.post("/turnos/abrir")
+def abrir_jornada(cierre: str = Form(""), tope: str = Form("")):
     try:
-        nube.disponibilidad(bool(disponible), mensaje)
+        nube.abrir(cierre, tope)
     except nube.ErrorNube as error:
         return RedirectResponse(f"/turnos?error={error}", status_code=303)
     return RedirectResponse("/turnos", status_code=303)
+
+
+@app.post("/turnos/cerrar")
+def cerrar_jornada(nota: str = Form("")):
+    try:
+        nube.cerrar(nota)
+    except nube.ErrorNube as error:
+        return RedirectResponse(f"/turnos?error={error}", status_code=303)
+    return RedirectResponse("/turnos", status_code=303)
+
+
+@app.post("/turnos/pausar")
+def pausar_atencion(hasta: str = Form(""), minutos: int = Form(0),
+                    motivo: str = Form("No disponible")):
+    if hasta and len(hasta) == 5:
+        hasta = f"{datetime.now():%Y-%m-%d} {hasta}:00"
+    try:
+        nube.pausar(hasta, minutos, motivo)
+    except nube.ErrorNube as error:
+        return RedirectResponse(f"/turnos?error={error}", status_code=303)
+    return RedirectResponse("/turnos", status_code=303)
+
+
+@app.post("/turnos/cancelar-cola")
+def cancelar_cola(motivo: str = Form(""), cerrar: str = Form("1")):
+    try:
+        resultado = nube.cancelar_cola(motivo, bool(cerrar))
+    except nube.ErrorNube as error:
+        return RedirectResponse(f"/turnos?error={error}", status_code=303)
+    return RedirectResponse(
+        f"/turnos?aviso=Se cancelaron {resultado['cancelados']} turno(s) y se les avisó por correo.",
+        status_code=303)
 
 
 @app.post("/turnos/{turno_id}/llamar")
@@ -457,6 +491,20 @@ def cerrar_turno(turno_id: int, accion: str = Form("atendido")):
     return RedirectResponse("/turnos", status_code=303)
 
 
+@app.post("/cita/{cita_id}/cancelar")
+def cancelar_cita_confirmada(cita_id: int, motivo: str = Form("")):
+    datos = nube.ultimo_estado()
+    cita = next((c for c in datos.get("citas_aprobadas", []) if int(c["id"]) == cita_id), None)
+    if cita is None:
+        raise HTTPException(404, "Esa cita ya no está confirmada.")
+    try:
+        turnos.cancelar_cita(cita, motivo)
+    except nube.ErrorNube as error:
+        return RedirectResponse(f"/turnos?error={error}", status_code=303)
+    return RedirectResponse("/turnos?aviso=Cita cancelada; se le avisó con el enlace para reagendar.",
+                            status_code=303)
+
+
 @app.post("/cita/{cita_id}/resolver")
 def resolver_cita(cita_id: int, accion: str = Form("aprobar"), inicio: str = Form(""),
                   motivo: str = Form(""), con: sqlite3.Connection = Depends(base_datos)):
@@ -482,8 +530,13 @@ def ver_agenda(request: Request):
     semana = {dia: [] for dia in range(1, 8)}
     for tramo in datos.get("horarios", []):
         semana[int(tramo["dia"])].append(tramo)
+    hoy = datetime.now()
+    proximos = [(hoy + timedelta(days=dias)).strftime("%Y-%m-%d") for dias in range(0, 7)]
     return _pagina(request, "agenda.html",
                    listo=listo, error=error, datos=datos, semana=semana,
+                   aviso=request.query_params.get("aviso", ""),
+                   jornada=datos.get("jornada") or {},
+                   proximos=proximos,
                    bloqueos=datos.get("bloqueos", []),
                    url_publica=nube.url_publica() if listo else "")
 
@@ -500,6 +553,17 @@ def guardar_horarios(request: Request, inicio: list[str] = Form([]), fin: list[s
     except nube.ErrorNube as error:
         return RedirectResponse(f"/agenda?error={error}", status_code=303)
     return RedirectResponse("/agenda", status_code=303)
+
+
+@app.post("/agenda/jornada")
+def guardar_jornada(fecha: str = Form(...), apertura: str = Form(""), cierre: str = Form(""),
+                    tope: str = Form(""), cancelar: str = Form(""), nota: str = Form("")):
+    try:
+        nube.configurar_jornada(fecha, apertura, cierre, tope if tope else None,
+                                "cancelada" if cancelar else "", nota)
+    except nube.ErrorNube as error:
+        return RedirectResponse(f"/agenda?error={error}", status_code=303)
+    return RedirectResponse("/agenda?aviso=Jornada guardada.", status_code=303)
 
 
 @app.post("/agenda/bloqueo")

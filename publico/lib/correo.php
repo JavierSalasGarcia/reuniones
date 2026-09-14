@@ -242,3 +242,26 @@ function correo_minuta(array $dep, array $minuta, string $destinatario, string $
         'tipo' => 'application/pdf',
     ]]);
 }
+
+/** Aviso a quien estaba formado cuando hay que cancelar la cola. */
+function correo_cola_cancelada(array $dep, array $turno, string $motivo, string $enlace): void
+{
+    $razon = trim($motivo) !== '' ? "\n\nMotivo: {$motivo}" : '';
+    correo_enviar($turno['email'], "Se canceló la atención de hoy · {$dep['nombre']}",
+        "Lamentamos avisarte que tu turno {$turno['folio']} no podrá ser atendido hoy, "
+        . "por causas ajenas a ti." . $razon . "\n\n"
+        . "Puedes formarte mañana desde la misma página, o solicitar una reunión con fecha "
+        . "y hora para no tener que esperar:\n{$enlace}\n\n"
+        . "Una disculpa por el contratiempo.\n{$dep['titular']}");
+}
+
+/** Aviso de cancelacion de una cita ya confirmada, con enlace para reagendar. */
+function correo_cita_cancelada(array $dep, array $cita, string $motivo, string $enlace): void
+{
+    $cuando = u_fecha_larga(a_momento($cita['confirmada'] ?: $cita['propuesta']));
+    $razon = trim($motivo) !== '' ? "\n\nMotivo: {$motivo}" : '';
+    correo_enviar($cita['email'], "Se canceló tu reunión · {$dep['nombre']}",
+        "Tu reunión con {$dep['titular']} del {$cuando} tuvo que cancelarse." . $razon . "\n\n"
+        . "Puedes elegir otra fecha aquí, sin volver a empezar el trámite:\n{$enlace}\n\n"
+        . "Una disculpa por el cambio.\n{$dep['titular']}");
+}

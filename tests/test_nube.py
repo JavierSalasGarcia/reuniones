@@ -38,6 +38,14 @@ ESTADO = {
     "dependencia": {"clave": "sa", "nombre": "Subdirección", "disponible": True, "duracion_max": 10},
     "ahora": "2026-09-14 10:00:00",
     "abierta": True,
+    "atencion": "atendiendo",
+    "jornada": {"apertura": "08:30", "cierre": "15:00", "tope": "14:00", "estado": "abierta"},
+    "disponible_hasta": "2026-09-14 12:00:00",
+    "no_disponible_hasta": None,
+    "motivo_cierre": "",
+    "citas_aprobadas": [{"id": 9, "nombre": "Rosa Lima", "email": "rosa@uaemex.mx",
+                         "asunto": "Servicio social", "confirmada": "2026-09-16 12:00:00",
+                         "propuesta": "2026-09-16 12:00:00", "minutos": 30}],
     "proximo_hueco": "2026-09-14 10:24:00",
     "turnos": [
         {"id": 1, "folio": 1, "nombre": "Ana Ruiz", "email": "ana@uaemex.mx", "asunto": "Revalidación",
@@ -162,3 +170,67 @@ def test_llamar_a_alguien_nuevo_no_inventa_expediente(con, nube_lista, monkeypat
     enlace = turnos.llamar(con, ESTADO["turnos"][1])
     assert enlace["persona_id"] is None and enlace["reunion_id"] is None
     assert enlace["email"] == "luis@uaemex.mx"
+
+
+# --- jornada: llegar, pausar, cerrar y cancelar la cola -------------------
+
+def test_la_leyenda_dice_hasta_que_hora_estas_disponible():
+    assert turnos.leyenda(ESTADO) == "Disponible hasta 12:00"
+    ocupado = dict(ESTADO, atencion="ocupado", no_disponible_hasta="2026-09-14 14:00:00")
+    assert turnos.leyenda(ocupado) == "No disponible hasta 14:00"
+    pausada = dict(ESTADO, atencion="pausada")
+    assert turnos.leyenda(pausada) == "Disponible a partir de las 08:30"
+    cerrada = dict(ESTADO, atencion="cerrada", motivo_cierre="Salí a una emergencia")
+    assert turnos.leyenda(cerrada) == "Salí a una emergencia"
+
+
+def test_abrir_manda_la_hora_de_cierre_y_el_tope(nube_lista, monkeypatch):
+    import json
+
+    llamadas = enchufar(monkeypatch, lambda p: httpx.Response(200, json={"ok": True, "jornada": {}}))
+    nube.abrir("15:00", "14:00")
+    cuerpo = json.loads(llamadas[0].content)
+    assert dict(llamadas[0].url.params)["accion"] == "abrir"
+    assert cuerpo["cierre"] == "15:00" and cuerpo["tope"] == "14:00"
+
+
+def test_pausar_convierte_los_minutos_en_hora_de_regreso(nube_lista, monkeypatch):
+    import json
+
+    llamadas = enchufar(monkeypatch, lambda p: httpx.Response(200, json={"ok": True}))
+    nube.pausar(minutos=45, motivo="Videoconferencia")
+    cuerpo = json.loads(llamadas[0].content)
+    assert cuerpo == {"motivo": "Videoconferencia", "minutos": 45}
+
+
+def test_cancelar_la_cola_avisa_cuantos_fueron(nube_lista, monkeypatch):
+    enchufar(monkeypatch, lambda p: httpx.Response(200, json={
+        "ok": True, "cancelados": 3, "avisados": ["a@uaemex.mx", "b@uaemex.mx", "c@uaemex.mx"]}))
+    resultado = nube.cancelar_cola("Salida de emergencia")
+    assert resultado["cancelados"] == 3
+    assert len(resultado["avisados"]) == 3
+
+
+def test_configurar_la_jornada_de_otro_dia(nube_lista, monkeypatch):
+    import json
+
+    llamadas = enchufar(monkeypatch, lambda p: httpx.Response(200, json={"ok": True, "jornada": {}}))
+    nube.configurar_jornada("2026-09-15", "10:00", "14:00", "13:00")
+    cuerpo = json.loads(llamadas[0].content)
+    assert cuerpo == {"fecha": "2026-09-15", "apertura": "10:00", "cierre": "14:00", "tope": "13:00"}
+
+
+def test_cancelar_una_cita_confirmada(nube_lista, monkeypatch):
+    import json
+
+    llamadas = enchufar(monkeypatch, lambda p: httpx.Response(200, json={"ok": True, "cita": {}}))
+    turnos.cancelar_cita({"id": 9}, "Me mandaron a una comisión")
+    cuerpo = json.loads(llamadas[0].content)
+    assert cuerpo["accion"] == "cancelar" and cuerpo["motivo"] == "Me mandaron a una comisión"
+
+
+def test_el_resumen_separa_citas_confirmadas_de_solicitudes(nube_lista):
+    resumen = turnos.resumen_fila(ESTADO)
+    assert len(resumen["citas"]) == 1 and resumen["citas"][0]["nombre"] == "Pedro Lara"
+    assert len(resumen["confirmadas"]) == 1 and resumen["confirmadas"][0]["nombre"] == "Rosa Lima"
+    assert resumen["leyenda"] == "Disponible hasta 12:00"

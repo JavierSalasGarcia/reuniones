@@ -213,3 +213,52 @@ def test_si_el_servidor_no_responde_la_pagina_lo_dice(cliente, entorno, monkeypa
     monkeypatch.setattr(nube, "minutas", truena)
     pagina = cliente.get(f"/persona/{persona_id}/servidor").text
     assert "sin red" in pagina
+
+
+def _conectar_nube(entorno, monkeypatch, estado=None):
+    """Deja el panel hablando con una nube simulada."""
+    import httpx
+
+    from reuniones import nube
+    from tests.test_nube import ESTADO, enchufar
+
+    monkeypatch.setenv("REUNIONES_NUBE_TOKEN", "token-de-prueba")
+    entorno.nube.url = "https://fingenieria.mx/citas"
+    entorno.nube.dependencia = "sa"
+    nube._cache.datos, nube._cache.momento = {}, 0.0
+    enchufar(monkeypatch, lambda p: httpx.Response(200, json=estado or ESTADO))
+    return nube
+
+
+def test_la_fila_anuncia_hasta_que_hora_estas_disponible(cliente, entorno, monkeypatch):
+    nube = _conectar_nube(entorno, monkeypatch)
+    pagina = cliente.get("/turnos").text
+    assert "Disponible hasta 12:00" in pagina
+    assert "Terminar la jornada" in pagina, "estando abierto se puede cerrar o pausar"
+    assert "Cancelar la cola" in pagina
+    nube._cache.datos, nube._cache.momento = {}, 0.0
+
+
+def test_si_no_has_llegado_el_panel_ofrece_abrir(cliente, entorno, monkeypatch):
+    from tests.test_nube import ESTADO
+
+    pausada = dict(ESTADO, atencion="pausada", disponible_hasta=None)
+    nube = _conectar_nube(entorno, monkeypatch, pausada)
+    pagina = cliente.get("/turnos").text
+    assert "Disponible a partir de las 08:30" in pagina
+    assert "Llegué, abrir atención" in pagina
+    nube._cache.datos, nube._cache.momento = {}, 0.0
+
+
+def test_las_citas_confirmadas_se_pueden_cancelar_desde_el_panel(cliente, entorno, monkeypatch):
+    nube = _conectar_nube(entorno, monkeypatch)
+    pagina = cliente.get("/turnos").text
+    assert "Rosa Lima" in pagina and "Cancelar la cita" in pagina
+    nube._cache.datos, nube._cache.momento = {}, 0.0
+
+
+def test_la_agenda_permite_dejar_lista_la_jornada_de_otro_dia(cliente, entorno, monkeypatch):
+    nube = _conectar_nube(entorno, monkeypatch)
+    pagina = cliente.get("/agenda").text
+    assert "Jornada de un día" in pagina and "Llego a las" in pagina
+    nube._cache.datos, nube._cache.momento = {}, 0.0

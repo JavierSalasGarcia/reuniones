@@ -62,10 +62,25 @@ function fila_estado(array $dep, ?DateTimeImmutable $ahora = null): array
     $dia = $ahora->setTime(0, 0, 0);
     $fecha = $ahora->format('Y-m-d');
 
-    $ventanas = Agenda::ventanas($dia, horarios((int) $dep['id']),
-        excepciones((int) $dep['id'], $fecha, $fecha));
+    $jornada = jornada($dep, $fecha, true);
     $reuniones = bloqueos((int) $dep['id'], $dia);
     $turnos = turnos_del_dia((int) $dep['id'], $fecha);
+
+    // El horario semanal propone; la jornada del dia decide.
+    $base = Agenda::ventanas($dia, horarios((int) $dep['id']),
+        excepciones((int) $dep['id'], $fecha, $fecha));
+    $ventanas = [];
+    $apertura = $jornada ? Agenda::conHora($dia, (string) $jornada['apertura']) : null;
+    $cierre = $jornada ? Agenda::conHora($dia, (string) $jornada['cierre']) : null;
+    $estadoJornada = $jornada['estado'] ?? 'sin-jornada';
+
+    if ($jornada !== null && !in_array($estadoJornada, ['cancelada', 'cerrada'], true)) {
+        if (!$base) {
+            $base = [['inicio' => $apertura, 'fin' => $cierre]];   // dia fuera del horario semanal
+        }
+        // La hora de apertura manda: al abrir se guarda la hora real de llegada.
+        $ventanas = Agenda::recortar($base, $apertura, $cierre);
+    }
 
     $entrada = array_map(fn($t) => [
         'id' => (int) $t['id'],
@@ -93,10 +108,48 @@ function fila_estado(array $dep, ?DateTimeImmutable $ahora = null): array
 
     $siguiente = Agenda::acomodar($calculo['libre'], (int) $dep['duracion_max'], $ventanas, $reuniones,
         (int) $dep['colchon_reunion']);
-    $abierta = ((int) $dep['disponible'] === 1) && $siguiente !== null;
+
+    // Hasta que hora se puede uno formar: lo que tu fijaste, y ademas que el
+    // turno alcance a ser atendido antes de que cierres.
+    $tope = ($jornada && $jornada['tope']) ? Agenda::conHora($dia, (string) $jornada['tope']) : null;
+    $dentroDelTope = $tope === null || $ahora < $tope;
+    $abierta = in_array($estadoJornada, ['programada', 'abierta'], true)
+        && $dentroDelTope && $siguiente !== null;
+
+    $ocupadoHasta = $estadoJornada === 'abierta'
+        ? Agenda::ocupado_hasta($ahora, $reuniones) : null;
+    $disponibleHasta = ($estadoJornada === 'abierta' && $ocupadoHasta === null)
+        ? Agenda::disponible_hasta($ahora, $ventanas, $reuniones) : null;
+
+    if ($estadoJornada === 'cerrada') {
+        $atencion = 'cerrada';
+    } elseif ($estadoJornada === 'cancelada' || $jornada === null) {
+        $atencion = 'sin-atencion';
+    } elseif ($estadoJornada === 'programada') {
+        $atencion = 'pausada';
+    } elseif ($ocupadoHasta !== null) {
+        $atencion = 'ocupado';
+    } else {
+        $atencion = 'atendiendo';
+    }
+
+    $nota = trim((string) ($jornada['nota'] ?? '')) ?: trim((string) $dep['mensaje']);
+    $motivo = '';
+    if (!$abierta) {
+        if ($atencion === 'cerrada') {
+            $motivo = $nota ?: 'La atención de hoy terminó.';
+        } elseif ($atencion === 'sin-atencion') {
+            $motivo = $nota ?: 'Hoy no hay atención.';
+        } elseif (!$dentroDelTope) {
+            $motivo = 'El registro en la cola cerró a las ' . u_hora($tope) . '.';
+        } else {
+            $motivo = 'Por hoy ya no alcanza el horario de atención.';
+        }
+    }
 
     return [
         'dependencia' => $dep,
+        'jornada' => $jornada,
         'ahora' => $ahora,
         'ventanas' => $ventanas,
         'bloqueos' => $reuniones,
@@ -105,10 +158,153 @@ function fila_estado(array $dep, ?DateTimeImmutable $ahora = null): array
         'espera' => array_values(array_filter($lista, fn($t) => $t['estado'] === 'espera')),
         'proximo_hueco' => $siguiente,
         'abierta' => $abierta,
-        'motivo_cierre' => $abierta ? '' : (((int) $dep['disponible'] === 1)
-            ? 'Por hoy ya no alcanza el horario de atención.'
-            : ($dep['mensaje'] ?: 'En este momento no hay atención.')),
+        'atencion' => $atencion,
+        'apertura' => $apertura,
+        'cierre' => $cierre,
+        'tope' => $tope,
+        'disponible_hasta' => $disponibleHasta,
+        'no_disponible_hasta' => $ocupadoHasta ?? ($atencion === 'pausada' ? $apertura : null),
+        'nota' => $nota,
+        'motivo_cierre' => $motivo,
     ];
+}
+
+/**
+ * La frase que ve la gente en la pantalla y en la pagina:
+ * "Disponible hasta 12:00", "No disponible hasta 14:00", etcetera.
+ */
+function leyenda_atencion(array $estado): string
+{
+    switch ($estado['atencion']) {
+        case 'atendiendo':
+            return $estado['disponible_hasta']
+                ? 'Disponible hasta ' . u_hora($estado['disponible_hasta'])
+                : 'Disponible';
+        case 'ocupado':
+            return $estado['no_disponible_hasta']
+                ? 'No disponible hasta ' . u_hora($estado['no_disponible_hasta'])
+                : 'No disponible en este momento';
+        case 'pausada':
+            return $estado['apertura']
+                ? 'Disponible a partir de las ' . u_hora($estado['apertura'])
+                : 'La atención comienza más tarde';
+        case 'cerrada':
+            return $estado['nota'] ?: 'La atención de hoy terminó';
+        default:
+            return $estado['nota'] ?: 'Hoy no hay atención';
+    }
+}
+
+// --- jornada del dia ------------------------------------------------------
+//
+// La jornada dice a que hora llegas, hasta que hora atiendes y hasta que hora
+// se puede formar la gente. El horario semanal solo sirve para proponer esos
+// valores; lo que manda es la jornada, que puedes configurar con dias de
+// anticipacion o cambiar en el momento.
+
+function jornada(array $dep, string $fecha, bool $crear = true): ?array
+{
+    $fila = fila_una('SELECT * FROM jornadas WHERE dependencia_id = ? AND fecha = ?',
+        [$dep['id'], $fecha]);
+    if ($fila !== null || !$crear) {
+        return $fila;
+    }
+
+    $dia = new DateTimeImmutable($fecha . ' 00:00:00');
+    $ventanas = Agenda::ventanas($dia, horarios((int) $dep['id']),
+        excepciones((int) $dep['id'], $fecha, $fecha));
+    if (!$ventanas) {
+        return null;                    // ese dia no hay atencion programada
+    }
+    $apertura = $ventanas[0]['inicio']->format('H:i');
+    $cierre = end($ventanas)['fin']->format('H:i');
+    consulta('INSERT INTO jornadas (dependencia_id, fecha, apertura, cierre, estado, creado) '
+        . 'VALUES (?, ?, ?, ?, ?, ?)',
+        [$dep['id'], $fecha, $apertura, $cierre, 'programada', ahora_texto()]);
+    return jornada($dep, $fecha, false);
+}
+
+/** Configura un dia, hoy o uno futuro, sin necesidad de estar en la oficina. */
+function configurar_jornada(array $dep, string $fecha, array $datos): array
+{
+    $actual = jornada($dep, $fecha, true);
+    $apertura = $datos['apertura'] ?? ($actual['apertura'] ?? '09:00');
+    $cierre = $datos['cierre'] ?? ($actual['cierre'] ?? '15:00');
+    $tope = array_key_exists('tope', $datos) ? $datos['tope'] : ($actual['tope'] ?? null);
+    $estado = $datos['estado'] ?? ($actual['estado'] ?? 'programada');
+    $nota = u_limpio($datos['nota'] ?? ($actual['nota'] ?? ''), 160);
+
+    if ($actual === null) {
+        consulta('INSERT INTO jornadas (dependencia_id, fecha, apertura, cierre, tope, estado, '
+            . 'nota, creado) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [$dep['id'], $fecha, $apertura, $cierre, $tope, $estado, $nota, ahora_texto()]);
+    } else {
+        consulta('UPDATE jornadas SET apertura = ?, cierre = ?, tope = ?, estado = ?, nota = ? '
+            . 'WHERE id = ?',
+            [$apertura, $cierre, $tope, $estado, $nota, $actual['id']]);
+    }
+    evento((int) $dep['id'], 'jornada', "{$fecha} {$apertura}-{$cierre} ({$estado})");
+    return jornada($dep, $fecha, false);
+}
+
+/** Llegaste a la oficina: la atencion empieza ahora. */
+function abrir_jornada(array $dep, ?string $cierre = null, ?string $tope = null,
+                       ?string $fecha = null, ?string $apertura = null): array
+{
+    $ahora = new DateTimeImmutable('now');
+    $fecha = $fecha ?? $ahora->format('Y-m-d');
+    $actual = jornada($dep, $fecha, true);
+    // Abrir significa "llegue": la atencion arranca a esta hora, no a la prevista.
+    $apertura = $apertura ?: ($fecha === $ahora->format('Y-m-d')
+        ? $ahora->format('H:i') : ($actual['apertura'] ?? '09:00'));
+
+    configurar_jornada($dep, $fecha, [
+        'apertura' => $apertura,
+        'cierre' => $cierre ?: ($actual['cierre'] ?? '15:00'),
+        'tope' => $tope !== null ? ($tope ?: null) : ($actual['tope'] ?? null),
+        'estado' => 'abierta',
+    ]);
+    consulta('UPDATE jornadas SET abierta_en = ?, cerrada_en = NULL WHERE dependencia_id = ? '
+        . 'AND fecha = ?', [ahora_texto(), $dep['id'], $fecha]);
+    evento((int) $dep['id'], 'jornada-abierta', $fecha);
+    return jornada($dep, $fecha, false);
+}
+
+function cerrar_jornada(array $dep, string $nota = '', ?string $fecha = null): array
+{
+    $fecha = $fecha ?? (new DateTimeImmutable('now'))->format('Y-m-d');
+    jornada($dep, $fecha, true);
+    consulta('UPDATE jornadas SET estado = ?, nota = ?, cerrada_en = ? WHERE dependencia_id = ? '
+        . 'AND fecha = ?', ['cerrada', u_limpio($nota, 160), ahora_texto(), $dep['id'], $fecha]);
+    evento((int) $dep['id'], 'jornada-cerrada', $fecha . ($nota ? " · {$nota}" : ''));
+    return jornada($dep, $fecha, false);
+}
+
+/**
+ * Cancela de golpe a quienes esperan en la cola. Devuelve los turnos que se
+ * cancelaron para poder avisarles por correo.
+ */
+function cancelar_cola(array $dep, string $motivo = '', bool $cerrar = true): array
+{
+    $fecha = (new DateTimeImmutable('now'))->format('Y-m-d');
+    $afectados = filas('SELECT * FROM turnos WHERE dependencia_id = ? AND fecha = ? '
+        . 'AND estado IN (?, ?) ORDER BY folio', [$dep['id'], $fecha, 'espera', 'llamado']);
+    foreach ($afectados as $turno) {
+        cancelar_turno($turno, 'cancelacion de cola');
+    }
+    if ($cerrar) {
+        cerrar_jornada($dep, $motivo);
+    }
+    evento((int) $dep['id'], 'cola-cancelada', count($afectados) . ' turno(s)');
+    return $afectados;
+}
+
+/** Citas confirmadas de hoy en adelante, para poder cancelarlas. */
+function citas_confirmadas(int $dependencia, int $limite = 100): array
+{
+    return filas('SELECT * FROM citas WHERE dependencia_id = ? AND estado = ? AND confirmada >= ? '
+        . 'ORDER BY confirmada LIMIT ?',
+        [$dependencia, 'aprobada', (new DateTimeImmutable('now'))->format('Y-m-d 00:00:00'), $limite]);
 }
 
 function turno_por_token(string $token): ?array

@@ -98,7 +98,7 @@ Si tienes PHP por línea de comandos, desde la carpeta del proyecto completo:
 php publico/pruebas/correr.php
 ```
 
-Debe responder «123 comprobaciones correctas». Esas pruebas no tocan tu base de datos
+Debe responder «172 comprobaciones correctas». Esas pruebas no tocan tu base de datos
 real ni mandan correos; usan una base en memoria.
 
 En el navegador, comprueba que `https://fingenieria.mx/citas/sa` muestra el formulario
@@ -175,7 +175,7 @@ Las pruebas automáticas no necesitan cámara ni internet:
 .venv\Scripts\python.exe -m pytest
 ```
 
-Debe responder «96 passed». Después, las pruebas a mano. Con el servidor corriendo,
+Debe responder «107 passed». Después, las pruebas a mano. Con el servidor corriendo,
 verifica el estado general:
 
 ```
@@ -199,6 +199,15 @@ por ejemplo `20260914_1035_original.txt` y `20260914_1035_minuta.txt`. En segund
 desaparecer de esa carpeta y aparecer dentro de la reunión en el navegador. Si no se
 asocian solos, quedan en la pestaña Bandeja para asignarlos con un clic, que también
 conviene probar.
+
+Prueba la jornada, que es lo que la gente ve. Con `scripts\reunion.cmd abrir --cierre 15:00`
+la atención queda abierta y la pantalla debe decir «Disponible hasta 15:00»; con
+`scripts\reunion.cmd pausar --minutos 30 --motivo "Videoconferencia"` debe cambiar a «No
+disponible hasta» la hora que corresponda, y volver sola al terminar ese rato. Deja lista
+la jornada de mañana con `scripts\reunion.cmd jornada 2026-09-15 --apertura 08:00` y
+compruébalo con `scripts\reunion.cmd jornada 2026-09-15`. Por último, con alguien formado
+de prueba, `scripts\reunion.cmd cancelar-cola --motivo "Prueba"` debe cancelarlo y
+mandarle el correo de aviso.
 
 Prueba el correo desde la reunión, con el botón de enviar la minuta a tu propia cuenta
 institucional. Debe llegar con el PDF adjunto y con remitente de `fingenieria.mx`. En la

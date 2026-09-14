@@ -44,3 +44,9 @@ CREATE TABLE minutas (
   sha256 TEXT NOT NULL, estado TEXT NOT NULL DEFAULT 'guardada', destinatario TEXT NOT NULL DEFAULT '',
   detalle TEXT NOT NULL DEFAULT '', creado TEXT NOT NULL, enviado TEXT,
   UNIQUE (dependencia_id, sha256));
+CREATE TABLE jornadas (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, dependencia_id INTEGER NOT NULL, fecha TEXT NOT NULL,
+  apertura TEXT NOT NULL, cierre TEXT NOT NULL, tope TEXT,
+  estado TEXT NOT NULL DEFAULT 'programada', nota TEXT NOT NULL DEFAULT '',
+  abierta_en TEXT, cerrada_en TEXT, creado TEXT NOT NULL,
+  UNIQUE (dependencia_id, fecha));

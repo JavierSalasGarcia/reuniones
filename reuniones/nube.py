@@ -130,7 +130,72 @@ def _tras_escribir(resultado: dict) -> dict:
 
 
 def disponibilidad(disponible: bool, mensaje: str = "") -> dict:
+    """Compatibilidad: prender abre la jornada y apagar la cierra."""
     return _tras_escribir(_llamar("disponible", {"disponible": disponible, "mensaje": mensaje}, "POST"))
+
+
+# --- jornada --------------------------------------------------------------
+
+def abrir(cierre: str = "", tope: str = "", apertura: str = "", mensaje: str = "") -> dict:
+    """Llegaste a la oficina: la atención empieza ahora."""
+    carga = {"cierre": cierre or None, "tope": tope or None, "mensaje": mensaje}
+    if apertura:
+        carga["apertura"] = apertura
+    return _tras_escribir(_llamar("abrir", carga, "POST"))
+
+
+def cerrar(nota: str = "") -> dict:
+    return _tras_escribir(_llamar("cerrar", {"nota": nota}, "POST"))
+
+
+def jornada(fecha: str = "") -> dict:
+    listo, motivo = configurada()
+    if not listo:
+        raise ErrorNube(motivo)
+    cfg = config.actual()
+    parametros = {"d": cfg.nube.dependencia, "accion": "jornada"}
+    if fecha:
+        parametros["fecha"] = fecha
+    try:
+        with _cliente() as cliente:
+            respuesta = cliente.get("/api", params=parametros)
+            respuesta.raise_for_status()
+    except Exception as error:
+        raise ErrorNube(f"No se pudo consultar la jornada: {error}") from error
+    return respuesta.json().get("jornada") or {}
+
+
+def configurar_jornada(fecha: str, apertura: str = "", cierre: str = "", tope: str | None = None,
+                       estado: str = "", nota: str = "") -> dict:
+    """Deja lista la jornada de otro día: a qué hora llegas y hasta cuándo atiendes."""
+    carga: dict[str, Any] = {"fecha": fecha}
+    if apertura:
+        carga["apertura"] = apertura
+    if cierre:
+        carga["cierre"] = cierre
+    if tope is not None:
+        carga["tope"] = tope
+    if estado:
+        carga["estado"] = estado
+    if nota:
+        carga["nota"] = nota
+    return _tras_escribir(_llamar("jornada", carga, "POST"))
+
+
+def pausar(hasta: str = "", minutos: int = 0, motivo: str = "No disponible") -> dict:
+    """Un rato sin atender: clase, videoconferencia, comida o concentración."""
+    carga: dict[str, Any] = {"motivo": motivo}
+    if hasta:
+        carga["hasta"] = hasta
+    if minutos:
+        carga["minutos"] = minutos
+    return _tras_escribir(_llamar("pausar", carga, "POST"))
+
+
+def cancelar_cola(motivo: str = "", cerrar_jornada: bool = True) -> dict:
+    """Salida de emergencia: cancela la cola y avisa por correo a cada quien."""
+    return _tras_escribir(_llamar("cancelar_cola",
+                                  {"motivo": motivo, "cerrar": cerrar_jornada}, "POST"))
 
 
 def publicar_horarios(horarios: list[dict], excepciones: list[dict] | None = None) -> dict:

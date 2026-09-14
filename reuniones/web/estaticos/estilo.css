@@ -174,3 +174,10 @@ footer {
 .solicitud:first-of-type { border-top: 0; padding-top: 0; margin-top: 0; }
 .resumen-fila { display: flex; gap: 18px; flex-wrap: wrap; align-items: baseline; }
 .resumen-fila .numero { font-size: 26px; font-weight: 700; color: var(--acento); }
+
+/* Jornada y leyenda de disponibilidad */
+.jornada { background: var(--acento-claro); border-color: #cfe1f0; }
+.leyenda { font-size: 20px; font-weight: 700; margin: 0 0 6px; }
+.leyenda.atendiendo { color: var(--bien); }
+.leyenda.ocupado, .leyenda.pausada { color: #8a5a12; }
+.leyenda.cerrada, .leyenda.sin-atencion { color: var(--alerta); }

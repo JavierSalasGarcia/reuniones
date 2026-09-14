@@ -9,6 +9,31 @@
   <p class="apunte">Estos horarios son los que ve la gente al tomar turno o agendar en
     <a href="{{ url_publica }}" target="_blank">{{ url_publica }}</a>.</p>
 
+  {% if aviso %}<p class="exito">{{ aviso }}</p>{% endif %}
+
+  <section>
+    <h2>Jornada de un día</h2>
+    <p class="apunte">Deja lista la hora a la que llegarás mañana, o cualquier otro día, sin
+      tener que estar en la oficina. Mientras no abras la atención, la gente puede formarse y
+      la pantalla anuncia a partir de qué hora atiendes.</p>
+    <form method="post" action="/agenda/jornada" class="en-linea">
+      <label>Día
+        <select name="fecha">
+          {% for f in proximos %}<option value="{{ f }}">{{ f }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Llego a las <input type="time" name="apertura"></label>
+      <label>Cierro a las <input type="time" name="cierre"></label>
+      <label>Registro hasta <input type="time" name="tope"></label>
+      <input name="nota" placeholder="Nota (opcional)">
+      <label class="casilla"><input type="checkbox" name="cancelar" value="1"> Sin atención ese día</label>
+      <button>Guardar jornada</button>
+    </form>
+    {% if jornada %}
+    <p class="apunte">Hoy: {{ jornada.apertura }} a {{ jornada.cierre }} ({{ jornada.estado }}){% if jornada.tope %}, registro hasta {{ jornada.tope }}{% endif %}.</p>
+    {% endif %}
+  </section>
+
   <section>
     <h2>Horario semanal</h2>
     <form method="post" action="/agenda/horarios">
@@ -32,7 +57,8 @@
       </table>
       <button>Publicar horario</button>
       <p class="apunte">Deja vacío un renglón para cerrar ese bloque. El segundo bloque sirve
-        para partir el día, por ejemplo de 9 a 11 y de 12 a 14.</p>
+        para partir el día, por ejemplo de 9 a 11 y de 12 a 14. Este horario solo propone la
+        jornada de cada día; la hora real de llegada la fijas al abrir la atención.</p>
     </form>
   </section>
 

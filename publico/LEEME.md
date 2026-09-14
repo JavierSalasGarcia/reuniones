@@ -28,7 +28,8 @@ Asegúrate de que `subidas/` tenga permisos de escritura (750 o 770) y de que su
 servirse por web; solo se bajan por la API con el token de la dependencia.
 
 Si ya tenías la base creada de una instalación anterior, importa además
-`migraciones/001_minutas.sql`, que agrega la tabla donde viven las minutas.
+`migraciones/001_minutas.sql`, que agrega la tabla donde viven las minutas, y
+`migraciones/002_jornadas.sql`, que agrega la de las jornadas diarias.
 
 Si tu hosting no tiene `mod_rewrite`, todo sigue funcionando con la forma larga de las
 direcciones: `https://fingenieria.mx/citas/index.php?r=sa`.

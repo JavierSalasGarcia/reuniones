@@ -77,6 +77,31 @@ persona escribió; si es su primera vez, el sistema te lleva al alta con sus dat
 capturados. La pestaña **Agenda** publica tu horario semanal, aparta ratos para juntas y
 genera el QR para imprimir.
 
+## Jornada, cola y citas
+
+Son dos cosas distintas y el sistema las trata como tales. La **cola** es solo del día,
+con turnos de cinco o diez minutos que nadie puede tomar una vez pasada la hora de
+registro que fijaste, ni cuando lo que queda de jornada ya no alcanza para atender a uno
+más. Las **citas** son para otro día, duran más y quedan como solicitud hasta que las
+apruebas; una vez confirmadas apartan su bloque y puedes cancelarlas, con aviso y enlace
+para reagendar.
+
+Tu jornada se decide día con día. El horario semanal solo propone las horas; la jornada
+real la abres al llegar con `reunion abrir --cierre 15:00`, y desde ese momento corre la
+atención. Mientras no abras, la gente sí puede formarse y la pantalla anuncia «Disponible
+a partir de las 09:00». Puedes dejar lista la jornada de mañana en cualquier momento,
+desde la pestaña Agenda o con `reunion jornada 2026-09-15 --apertura 08:00`.
+
+Para los ratos en que estás pero no atiendes —una clase, una videoconferencia, la comida
+o simple trabajo concentrado— está `reunion pausar --hasta 13:00 --motivo "Clase"`, y la
+pantalla pasa a decir «No disponible hasta 13:00». Mientras atiendes, la leyenda dice
+hasta cuándo: «Disponible hasta 12:00», donde esa hora es la de tu próxima reunión
+agendada o el fin de tu jornada, lo que llegue primero.
+
+Si tienes que salir de emergencia, `reunion cancelar-cola --motivo "..."` cancela a todos
+los formados y les manda un correo explicando que fue por causas ajenas a ellos, con la
+invitación a formarse mañana o a agendar una cita.
+
 El monitor de la entrada muestra la vista pública de turnos con el código QR. Si se cae
 el internet, la Raspberry cambia sola al respaldo que sirve tu laptop en la red local
 (puerto 8010, que expone únicamente esa pantalla) y regresa al sitio público cuando la

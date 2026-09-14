@@ -1,6 +1,7 @@
 <section class="tarjeta">
   <h1>La fila de hoy</h1>
   <p class="meta"><?= u_escapar($dep['nombre']) ?> · actualizado a las <?= u_hora($estado['ahora']) ?></p>
+  <p class="leyenda <?= $estado['atencion'] ?>"><?= u_escapar(leyenda_atencion($estado)) ?></p>
 
   <?php if ($estado['actual']): ?>
   <div class="atendiendo">

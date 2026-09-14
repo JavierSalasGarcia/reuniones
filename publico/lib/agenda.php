@@ -158,6 +158,58 @@ final class Agenda
         return null;
     }
 
+    /** Recorta las ventanas del dia a la jornada real: de que hora a que hora. */
+    public static function recortar(array $ventanas, ?DateTimeImmutable $desde,
+                                    ?DateTimeImmutable $hasta): array
+    {
+        $recortadas = [];
+        foreach ($ventanas as $ventana) {
+            $inicio = ($desde !== null && $desde > $ventana['inicio']) ? $desde : $ventana['inicio'];
+            $fin = ($hasta !== null && $hasta < $ventana['fin']) ? $hasta : $ventana['fin'];
+            if ($fin > $inicio) {
+                $recortadas[] = ['inicio' => $inicio, 'fin' => $fin];
+            }
+        }
+        return $recortadas;
+    }
+
+    /**
+     * Hasta que hora hay atencion sin interrupcion a partir de `desde`:
+     * el inicio de la proxima reunion agendada, o el fin del horario.
+     */
+    public static function disponible_hasta(DateTimeImmutable $desde, array $ventanas,
+                                            array $bloqueos): ?DateTimeImmutable
+    {
+        $ventana = null;
+        foreach ($ventanas as $candidata) {
+            if ($desde < $candidata['fin']) {
+                $ventana = $candidata;
+                break;
+            }
+        }
+        if ($ventana === null) {
+            return null;
+        }
+        $limite = $ventana['fin'];
+        foreach (self::ordenar($bloqueos) as $bloqueo) {
+            if ($bloqueo['inicio'] > $desde && $bloqueo['inicio'] < $limite) {
+                $limite = $bloqueo['inicio'];
+            }
+        }
+        return $limite;
+    }
+
+    /** Si ahora mismo hay una reunion encima, a que hora termina. */
+    public static function ocupado_hasta(DateTimeImmutable $ahora, array $bloqueos): ?DateTimeImmutable
+    {
+        foreach (self::ordenar($bloqueos) as $bloqueo) {
+            if ($bloqueo['inicio'] <= $ahora && $bloqueo['fin'] > $ahora) {
+                return $bloqueo['fin'];
+            }
+        }
+        return null;
+    }
+
     /** Minutos de espera aproximados entre dos instantes, nunca negativos. */
     public static function espera(DateTimeImmutable $ahora, ?DateTimeImmutable $estimado): ?int
     {

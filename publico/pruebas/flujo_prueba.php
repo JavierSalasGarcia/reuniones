@@ -83,11 +83,13 @@ Pruebas::caso('cancelar un turno adelanta a los siguientes', function () {
     Pruebas::igual(hoy('10:00'), $estado['turnos'][1]['estimado']->format('Y-m-d H:i'));
 });
 
-Pruebas::caso('la fila se cierra cuando el titular no esta disponible', function () {
-    $dep = base_de_prueba(['disponible' => 0]);
+Pruebas::caso('la fila se cierra cuando la jornada termino', function () {
+    $dep = base_de_prueba();
+    cerrar_jornada($dep, 'Me retiro por hoy');
     $estado = fila_estado($dep, momento_hoy('10:00'));
     Pruebas::igual(false, $estado['abierta']);
-    Pruebas::cierto($estado['motivo_cierre'] !== '');
+    Pruebas::igual('cerrada', $estado['atencion']);
+    Pruebas::igual('Me retiro por hoy', $estado['motivo_cierre']);
 });
 
 Pruebas::caso('la fila se cierra cuando ya no alcanza el horario', function () {

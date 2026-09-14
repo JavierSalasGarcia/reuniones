@@ -115,9 +115,7 @@ if ($accion === 'estado') {
         $cita['adjuntos'] = adjuntos_de((int) $cita['id']);
         $solicitudes[] = $cita;
     }
-    $aprobadas = filas('SELECT * FROM citas WHERE dependencia_id = ? AND estado = ? AND propuesta >= ? '
-        . 'ORDER BY confirmada LIMIT 50',
-        [$dep['id'], 'aprobada', (new DateTimeImmutable('now'))->modify('-1 day')->format('Y-m-d H:i:s')]);
+    $aprobadas = citas_confirmadas((int) $dep['id'], 50);
 
     u_json([
         'dependencia' => [
@@ -130,6 +128,12 @@ if ($accion === 'estado') {
         ],
         'ahora' => $estado['ahora']->format('Y-m-d H:i:s'),
         'abierta' => $estado['abierta'],
+        'atencion' => $estado['atencion'],
+        'jornada' => $estado['jornada'],
+        'disponible_hasta' => $estado['disponible_hasta']
+            ? $estado['disponible_hasta']->format('Y-m-d H:i:s') : null,
+        'no_disponible_hasta' => $estado['no_disponible_hasta']
+            ? $estado['no_disponible_hasta']->format('Y-m-d H:i:s') : null,
         'motivo_cierre' => $estado['motivo_cierre'],
         'proximo_hueco' => $estado['proximo_hueco'] ? $estado['proximo_hueco']->format('Y-m-d H:i:s') : null,
         'turnos' => array_map(fn($t) => api_turno($t, $t['estimado']), $estado['turnos']),
@@ -146,10 +150,88 @@ if ($accion === 'estado') {
     exit;
 }
 
+// --- jornada -------------------------------------------------------------
+
+if ($accion === 'abrir') {
+    $jornada = abrir_jornada($dep, $cuerpo['cierre'] ?? null, $cuerpo['tope'] ?? null,
+        $cuerpo['fecha'] ?? null, $cuerpo['apertura'] ?? null);
+    consulta('UPDATE dependencias SET disponible = 1, mensaje = ? WHERE id = ?',
+        [u_limpio($cuerpo['mensaje'] ?? '', 255), $dep['id']]);
+    u_json(['ok' => true, 'jornada' => $jornada]);
+    exit;
+}
+
+if ($accion === 'cerrar') {
+    $jornada = cerrar_jornada($dep, (string) ($cuerpo['nota'] ?? ''), $cuerpo['fecha'] ?? null);
+    consulta('UPDATE dependencias SET disponible = 0 WHERE id = ?', [$dep['id']]);
+    u_json(['ok' => true, 'jornada' => $jornada]);
+    exit;
+}
+
+if ($accion === 'jornada') {
+    $fecha = (string) ($cuerpo['fecha'] ?? $_GET['fecha'] ?? (new DateTimeImmutable('now'))->format('Y-m-d'));
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
+        u_json(['jornada' => jornada($dep, $fecha, true)]);
+        exit;
+    }
+    $datos = [];
+    foreach (['apertura', 'cierre', 'estado', 'nota'] as $campo) {
+        if (isset($cuerpo[$campo])) {
+            $datos[$campo] = (string) $cuerpo[$campo];
+        }
+    }
+    if (array_key_exists('tope', $cuerpo)) {
+        $datos['tope'] = $cuerpo['tope'] ?: null;
+    }
+    u_json(['ok' => true, 'jornada' => configurar_jornada($dep, $fecha, $datos)]);
+    exit;
+}
+
+/** Un rato sin atender: clase, videoconferencia, comida o simple concentracion. */
+if ($accion === 'pausar') {
+    $ahora = new DateTimeImmutable('now');
+    $hasta = a_momento((string) ($cuerpo['hasta'] ?? ''));
+    if ($hasta === null && !empty($cuerpo['minutos'])) {
+        $hasta = $ahora->modify('+' . max(1, (int) $cuerpo['minutos']) . ' minutes');
+    }
+    if ($hasta === null || $hasta <= $ahora) {
+        u_json(['error' => 'indica hasta que hora'], 400);
+        exit;
+    }
+    consulta('INSERT INTO bloqueos (dependencia_id, inicio, fin, motivo, origen) VALUES (?, ?, ?, ?, ?)',
+        [$dep['id'], $ahora->format('Y-m-d H:i:s'), $hasta->format('Y-m-d H:i:s'),
+         u_limpio($cuerpo['motivo'] ?? 'No disponible', 160), 'manual']);
+    evento((int) $dep['id'], 'pausa', u_hora($hasta));
+    u_json(['ok' => true, 'hasta' => $hasta->format('Y-m-d H:i:s')]);
+    exit;
+}
+
+/** Salida de emergencia: se cancela la cola y se avisa a cada quien. */
+if ($accion === 'cancelar_cola') {
+    $motivo = u_limpio($cuerpo['motivo'] ?? '', 160);
+    $cerrar = !isset($cuerpo['cerrar']) || !empty($cuerpo['cerrar']);
+    $afectados = cancelar_cola($dep, $motivo, $cerrar);
+    $enlace = rtrim((string) (config()['sitio'] ?? ''), '/') . '/' . $dep['clave'];
+    foreach ($afectados as $turno) {
+        correo_cola_cancelada($dep, $turno, $motivo, $enlace);
+    }
+    if ($cerrar) {
+        consulta('UPDATE dependencias SET disponible = 0 WHERE id = ?', [$dep['id']]);
+    }
+    u_json(['ok' => true, 'cancelados' => count($afectados),
+            'avisados' => array_map(fn($t) => $t['email'], $afectados)]);
+    exit;
+}
+
 if ($accion === 'disponible') {
+    // Compatibilidad: prender equivale a abrir la jornada y apagar a cerrarla.
+    if (!empty($cuerpo['disponible'])) {
+        abrir_jornada($dep);
+    } else {
+        cerrar_jornada($dep, (string) ($cuerpo['mensaje'] ?? ''));
+    }
     consulta('UPDATE dependencias SET disponible = ?, mensaje = ? WHERE id = ?',
         [!empty($cuerpo['disponible']) ? 1 : 0, u_limpio($cuerpo['mensaje'] ?? '', 255), $dep['id']]);
-    evento((int) $dep['id'], 'disponibilidad', !empty($cuerpo['disponible']) ? 'disponible' : 'no disponible');
     u_json(['ok' => true]);
     exit;
 }
@@ -250,6 +332,12 @@ if ($accion === 'cita') {
     } elseif ((string) ($cuerpo['accion'] ?? '') === 'rechazar') {
         $resuelta = rechazar_cita($cita, u_limpio($cuerpo['motivo'] ?? '', 255));
         correo_cita_resuelta($dep, $resuelta, $enlace);
+    } elseif ((string) ($cuerpo['accion'] ?? '') === 'cancelar') {
+        $motivo = u_limpio($cuerpo['motivo'] ?? '', 255);
+        cancelar_cita($cita, 'titular');
+        $resuelta = cita_por_token((string) $cita['token']);
+        correo_cita_cancelada($dep, $cita, $motivo,
+            rtrim((string) (config()['sitio'] ?? ''), '/') . '/' . $dep['clave']);
     } else {
         u_json(['error' => 'accion desconocida'], 400);
         exit;

@@ -7,6 +7,9 @@
           ? u_escapar($estado['actual']['nombre_publico'] ?: u_nombre_corto($estado['actual']['nombre']))
           : ($estado['abierta'] ? 'En espera' : u_escapar($estado['motivo_cierre'])) ?>
     </p>
+    <p class="kiosco-leyenda <?= $estado['atencion'] ?>" id="leyenda">
+      <?= u_escapar(leyenda_atencion($estado)) ?>
+    </p>
   </div>
 
   <div class="kiosco-lado">
@@ -42,6 +45,9 @@ async function refrescar() {
     document.getElementById('nombre').textContent = datos.actual ? datos.actual.nombre
       : (datos.abierta ? 'En espera' : datos.mensaje);
     document.getElementById('reloj').textContent = datos.ahora;
+    const leyenda = document.getElementById('leyenda');
+    leyenda.textContent = datos.leyenda;
+    leyenda.className = 'kiosco-leyenda ' + datos.atencion;
     document.getElementById('siguientes').innerHTML = datos.siguientes.map(t =>
       `<li><span class="folio-chico">${t.folio}</span><span>${t.nombre}</span>` +
       `<span class="hora">${t.hora || '—'}</span></li>`).join('');
