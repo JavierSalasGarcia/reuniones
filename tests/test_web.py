@@ -262,3 +262,10 @@ def test_la_agenda_permite_dejar_lista_la_jornada_de_otro_dia(cliente, entorno, 
     pagina = cliente.get("/agenda").text
     assert "Jornada de un día" in pagina and "Llego a las" in pagina
     nube._cache.datos, nube._cache.momento = {}, 0.0
+
+
+def test_el_panel_avisa_cuando_la_reunion_se_paso_de_tiempo(cliente, entorno, monkeypatch):
+    nube = _conectar_nube(entorno, monkeypatch)
+    pagina = cliente.get("/turnos").text
+    assert "Llevan 14 de 10 minutos" in pagina and "4 de más" in pagina
+    nube._cache.datos, nube._cache.momento = {}, 0.0

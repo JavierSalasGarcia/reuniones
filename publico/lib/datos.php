@@ -101,6 +101,11 @@ function fila_estado(array $dep, ?DateTimeImmutable $ahora = null): array
         $turno['estimado'] = $calculo['estimados'][(int) $turno['id']] ?? null;
         $turno['espera'] = Agenda::espera($ahora, $turno['estimado']);
         if ($turno['estado'] === 'llamado') {
+            // Cuanto falta de esta reunion, contando desde que la llamaste.
+            $inicio = a_momento($turno['llamado']) ?? $ahora;
+            $fin = $inicio->modify('+' . (int) $turno['minutos'] . ' minutes');
+            $turno['restan'] = (int) round(($fin->getTimestamp() - $ahora->getTimestamp()) / 60);
+            $turno['transcurridos'] = (int) round(($ahora->getTimestamp() - $inicio->getTimestamp()) / 60);
             $actual = $turno;
         }
         $lista[] = $turno;

@@ -32,6 +32,12 @@ def entre(inicio: str, fin: str) -> bool:
         hasta = datetime.combine(ahora.date(), datetime.strptime(fin, "%H:%M").time()) + margen
     except ValueError:
         return False
+    if hasta <= desde:
+        # La ventana cruza la medianoche: se estira hacia el lado que toca.
+        if ahora >= desde:
+            hasta += timedelta(days=1)
+        else:
+            desde -= timedelta(days=1)
     return desde <= ahora <= hasta
 
 

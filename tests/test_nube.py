@@ -49,7 +49,8 @@ ESTADO = {
     "proximo_hueco": "2026-09-14 10:24:00",
     "turnos": [
         {"id": 1, "folio": 1, "nombre": "Ana Ruiz", "email": "ana@uaemex.mx", "asunto": "Revalidación",
-         "minutos": 10, "estado": "llamado", "estimado": "2026-09-14 10:00:00"},
+         "minutos": 10, "estado": "llamado", "estimado": "2026-09-14 10:00:00",
+         "transcurridos": 14, "restan": -4},
         {"id": 2, "folio": 2, "nombre": "Luis Mora", "email": "luis@uaemex.mx", "asunto": "Beca",
          "minutos": 5, "estado": "espera", "estimado": "2026-09-14 10:12:00"},
         {"id": 3, "folio": 3, "nombre": "Sara Díaz", "email": "sara@uaemex.mx", "asunto": "Firma",

@@ -59,6 +59,14 @@
       <span class="etiqueta">Atendiendo</span>
       <strong>{{ fila.actual.folio }} · {{ fila.actual.nombre }}</strong>
       <p>{{ fila.actual.asunto }} <span class="meta">{{ fila.actual.email }}</span></p>
+      {% set corridos = fila.actual.get('transcurridos') %}
+      {% set restan = fila.actual.get('restan') %}
+      {% if corridos is not none %}
+      <p class="{{ 'error' if restan is not none and restan < 0 else 'meta' }}">
+        Llevan {{ corridos }} de {{ fila.actual.minutos }} minutos
+        {%- if restan is not none and restan < 0 %}, {{ -restan }} de más{% endif %}.
+      </p>
+      {% endif %}
     </div>
     <form method="post" action="/turnos/{{ fila.actual.id }}/cerrar" class="en-linea">
       <button name="accion" value="atendido">Terminé</button>

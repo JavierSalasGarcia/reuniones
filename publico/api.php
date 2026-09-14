@@ -54,6 +54,8 @@ function api_turno(array $turno, ?DateTimeImmutable $estimado): array
         'llamado' => $turno['llamado'],
         'estimado' => $estimado ? $estimado->format('Y-m-d H:i:s') : null,
         'espera' => $turno['espera'] ?? null,
+        'restan' => $turno['restan'] ?? null,
+        'transcurridos' => $turno['transcurridos'] ?? null,
     ];
 }
 
@@ -343,6 +345,41 @@ if ($accion === 'cita') {
         exit;
     }
     u_json(['ok' => true, 'cita' => $resuelta]);
+    exit;
+}
+
+/**
+ * Vista minima para el reloj: quien sigue y cuanto falta de lo que estas
+ * atendiendo. Se consulta seguido, asi que responde lo menos posible.
+ */
+if ($accion === 'reloj') {
+    $estado = fila_estado($dep);
+    $esperando = $estado['espera'];
+    $siguiente = $esperando[0] ?? null;
+    $actual = $estado['actual'];
+
+    u_json([
+        'ahora' => $estado['ahora']->format('H:i'),
+        'atencion' => $estado['atencion'],
+        'leyenda' => leyenda_atencion($estado),
+        'abierta' => $estado['abierta'],
+        'esperando' => count($esperando),
+        'actual' => $actual ? [
+            'folio' => (int) $actual['folio'],
+            'nombre' => u_nombre_corto((string) $actual['nombre']),
+            'minutos' => (int) $actual['minutos'],
+            'transcurridos' => (int) $actual['transcurridos'],
+            'restan' => (int) $actual['restan'],
+            'excedido' => ((int) $actual['restan']) < 0,
+        ] : null,
+        'siguiente' => $siguiente ? [
+            'folio' => (int) $siguiente['folio'],
+            'nombre' => u_nombre_corto((string) $siguiente['nombre']),
+            'asunto' => (string) $siguiente['asunto'],
+            'hora' => $siguiente['estimado'] ? u_hora($siguiente['estimado']) : null,
+            'espera' => $siguiente['espera'],
+        ] : null,
+    ]);
     exit;
 }
 

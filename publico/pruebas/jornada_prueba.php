@@ -195,3 +195,19 @@ Pruebas::caso('al cerrar, la leyenda explica el motivo', function () {
     Pruebas::igual('La atención de hoy terminó',
         leyenda_atencion(fila_estado($otra, momento_hoy('13:00'))));
 });
+
+Pruebas::caso('de la reunion en curso se sabe cuanto falta', function () {
+    $dep = base_con_jornada('08:00', '18:00');
+    abrir_jornada($dep, '18:00', null, null, '08:00');
+    $turno = crear_turno($dep, 'Ana Ruiz', 'ana@uaemex.mx', 'Caso', 10);
+    consulta('UPDATE turnos SET estado = ?, llamado = ? WHERE id = ?',
+        ['llamado', hoy('11:00'), $turno['id']]);
+
+    $aMitad = fila_estado($dep, momento_hoy('11:04'))['actual'];
+    Pruebas::igual(6, $aMitad['restan']);
+    Pruebas::igual(4, $aMitad['transcurridos']);
+
+    $pasado = fila_estado($dep, momento_hoy('11:16'))['actual'];
+    Pruebas::igual(-6, $pasado['restan'], 'se pasaron seis minutos');
+    Pruebas::igual(16, $pasado['transcurridos']);
+});

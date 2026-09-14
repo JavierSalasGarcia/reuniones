@@ -120,3 +120,11 @@ def test_las_horas_fijas_tambien_apagan(tmp_path):
         fuera = ahora.replace(hour=0, minute=0) + timedelta(hours=2)
     assert _con_horas_fijas(tmp_path, f"{fuera:%H:%M}",
                             f"{fuera + timedelta(minutes=59):%H:%M}") == "0"
+
+
+def test_un_horario_que_cruza_la_medianoche_se_entiende(tmp_path):
+    ahora = datetime.now()
+    inicio = (ahora - timedelta(hours=2)).strftime("%H:%M")
+    fin = (ahora + timedelta(hours=2)).strftime("%H:%M")
+    # A las 23:00, esa ventana termina al día siguiente: debe seguir encendida.
+    assert _con_horas_fijas(tmp_path, inicio, fin) == "1"
