@@ -15,4 +15,5 @@ datos/
 publico/config.php
 publico/subidas/citas/*
 publico/subidas/pendientes/*
+publico/subidas/minutas/*
 !publico/subidas/**/.gitkeep

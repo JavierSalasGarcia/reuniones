@@ -118,3 +118,11 @@ function u_redirigir(string $destino): void
     header('Location: ' . $destino);
     exit;
 }
+
+/** Nombre seguro para carpetas y archivos. */
+function u_apodo(string $texto, int $largo = 60): string
+{
+    $sin = iconv('UTF-8', 'ASCII//TRANSLIT', $texto) ?: $texto;
+    $limpio = strtolower(trim(preg_replace('/[^A-Za-z0-9]+/', '-', $sin) ?? '', '-'));
+    return mb_substr($limpio, 0, $largo) ?: 'sin-nombre';
+}

@@ -34,7 +34,9 @@ class SMTPFalso:
 
 @pytest.fixture
 def correo_listo(entorno, monkeypatch):
+    """Envío directo por SMTP desde la laptop (via = laptop)."""
     SMTPFalso.enviados = []
+    entorno.correo.via = "laptop"
     monkeypatch.setenv("REUNIONES_SMTP_PASSWORD", "secreta")
     entorno.correo.servidor = "smtp.uaemex.mx"
     entorno.correo.usuario = "subdireccion@uaemex.mx"
@@ -79,6 +81,7 @@ def test_la_transcripcion_original_nunca_viaja(con, correo_listo):
 
 
 def test_sin_configuracion_avisa_en_lugar_de_fallar(con, entorno, monkeypatch):
+    entorno.correo.via = "laptop"
     entorno.correo.remitente = "subdireccion@uaemex.mx"
     monkeypatch.delenv("REUNIONES_SMTP_PASSWORD", raising=False)
     reunion_id = _reunion(con, entorno)
@@ -113,3 +116,123 @@ def test_las_respuestas_llegan_al_correo_institucional(con, correo_listo):
     reunion_id = _reunion(con, correo_listo)
     correo.enviar_minuta(con, reunion_id)
     assert SMTPFalso.enviados[0]["Reply-To"] == "javier.salas@uaemex.mx"
+
+
+# --- envío a través del servidor de fingenieria.mx ------------------------
+
+@pytest.fixture
+def envio_por_servidor(entorno, monkeypatch):
+    """Registra lo que se le pide al servidor en lugar de salir a la red."""
+    from reuniones import nube
+
+    entorno.correo.via = "servidor"
+    entorno.nube.url = "https://fingenieria.mx/citas"
+    entorno.nube.dependencia = "sa"
+    monkeypatch.setenv("REUNIONES_NUBE_TOKEN", "token-de-prueba")
+
+    movimientos = {"subidas": [], "envios": []}
+
+    def subir(pdf, persona, email, asunto="", fecha=None, reunion_local=None):
+        movimientos["subidas"].append({
+            "archivo": pdf, "contenido": pdf.read_bytes(), "persona": persona,
+            "email": email, "asunto": asunto, "fecha": fecha, "reunion": reunion_local,
+        })
+        return {"id": 77, "nombre": pdf.name, "estado": "guardada"}
+
+    def enviar(minuta_id, destinatario, mensaje=""):
+        movimientos["envios"].append({"id": minuta_id, "para": destinatario, "mensaje": mensaje})
+        return {"ok": True}
+
+    monkeypatch.setattr(nube, "subir_minuta", subir)
+    monkeypatch.setattr(nube, "enviar_minuta", enviar)
+    return movimientos
+
+
+def test_la_minuta_sube_al_servidor_y_de_ahi_se_manda(con, envio_por_servidor, entorno):
+    reunion_id = _reunion(con, entorno)
+    resultado = correo.enviar_minuta(con, reunion_id)
+
+    assert resultado["estado"] == "enviado"
+    subida = envio_por_servidor["subidas"][0]
+    assert subida["email"] == "ana@uaemex.mx"
+    assert subida["reunion"] == reunion_id
+    assert subida["contenido"].startswith(b"%PDF"), "sube el PDF, no el texto"
+    assert envio_por_servidor["envios"] == [{"id": 77, "para": "ana@uaemex.mx", "mensaje": ""}]
+
+    registro = correo.envios_de(con, reunion_id)
+    assert len(registro) == 1 and registro[0]["estado"] == "enviado"
+    assert "servidor" in registro[0]["detalle"]
+
+
+def test_al_servidor_solo_sube_la_minuta(con, envio_por_servidor, entorno):
+    reunion_id = _reunion(con, entorno, original="Hablante 2: esto es confidencial.")
+    correo.enviar_minuta(con, reunion_id)
+    subidas = envio_por_servidor["subidas"]
+    assert len(subidas) == 1
+    assert b"confidencial" not in subidas[0]["contenido"]
+
+
+def test_sin_conexion_el_envio_queda_pendiente(con, envio_por_servidor, entorno, monkeypatch):
+    from reuniones import nube
+
+    def sin_red(*args, **kwargs):
+        raise nube.ErrorNube("No se pudo hablar con el servidor: sin red")
+
+    monkeypatch.setattr(nube, "subir_minuta", sin_red)
+    reunion_id = _reunion(con, entorno)
+    resultado = correo.enviar_minuta(con, reunion_id)
+
+    assert resultado["estado"] == "pendiente"
+    registro = correo.envios_de(con, reunion_id)
+    assert registro[0]["estado"] == "pendiente"
+    assert len(correo.pendientes(con)) == 1
+
+
+def test_lo_pendiente_se_reintenta_y_no_duplica_el_registro(con, envio_por_servidor, entorno,
+                                                            monkeypatch):
+    from reuniones import nube
+
+    def sin_red(*args, **kwargs):
+        raise nube.ErrorNube("sin red")
+
+    monkeypatch.setattr(nube, "subir_minuta", sin_red)
+    reunion_id = _reunion(con, entorno)
+    correo.enviar_minuta(con, reunion_id)
+    pendiente = correo.pendientes(con)[0]
+
+    def subir(pdf, persona, email, asunto="", fecha=None, reunion_local=None):
+        return {"id": 78, "nombre": pdf.name}
+
+    monkeypatch.setattr(nube, "subir_minuta", subir)
+    assert correo.reintentar_pendientes(con) == 1
+
+    registro = correo.envios_de(con, reunion_id)
+    assert len(registro) == 1, "se actualiza el mismo renglón, no se agrega otro"
+    assert registro[0]["id"] == pendiente["id"]
+    assert registro[0]["estado"] == "enviado"
+    assert correo.pendientes(con) == []
+
+
+def test_si_el_servidor_rechaza_el_correo_no_queda_pendiente(con, envio_por_servidor, entorno,
+                                                             monkeypatch):
+    from reuniones import nube
+
+    def rechaza(minuta_id, destinatario, mensaje=""):
+        raise nube.ErrorEnvio("el buzón de destino no existe")
+
+    monkeypatch.setattr(nube, "enviar_minuta", rechaza)
+    reunion_id = _reunion(con, entorno)
+    with pytest.raises(correo.ErrorCorreo, match="no pudo entregar"):
+        correo.enviar_minuta(con, reunion_id)
+
+    registro = correo.envios_de(con, reunion_id)
+    assert registro[0]["estado"] == "error"
+    assert correo.pendientes(con) == [], "un rechazo no se reintenta solo"
+
+
+def test_sin_token_del_servidor_avisa_que_falta_configurar(con, entorno, monkeypatch):
+    monkeypatch.delenv("REUNIONES_NUBE_TOKEN", raising=False)
+    entorno.correo.via = "servidor"
+    reunion_id = _reunion(con, entorno)
+    with pytest.raises(correo.ErrorCorreo, match=".env"):
+        correo.enviar_minuta(con, reunion_id)

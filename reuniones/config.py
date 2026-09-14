@@ -63,8 +63,14 @@ class Transcripciones:
 
 @dataclass
 class Correo:
-    """Salida de correo. Todo sale por el SMTP de fingenieria.mx."""
+    """Salida de correo.
 
+    Con via = "servidor" la minuta sube a fingenieria.mx y desde alli se
+    envia, porque el correo institucional rechaza lo que sale de la laptop.
+    Con via = "laptop" se manda por SMTP directo desde este equipo.
+    """
+
+    via: str = "servidor"       # servidor (recomendado) | laptop
     servidor: str = "mail.fingenieria.mx"
     puerto: int = 587
     starttls: bool = True

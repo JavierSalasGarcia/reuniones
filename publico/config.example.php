@@ -15,6 +15,10 @@ return [
     'base_url' => '/citas',
     'zona' => 'America/Mexico_City',
 
+    // Cuantos dias se conservan las minutas en el servidor. 0 = para siempre,
+    // que es lo que conviene si quieres el expediente disponible desde aqui.
+    'minutas_dias' => 0,
+
     // Contraseña del panel de administracion. Generala con:
     //   php -r "echo password_hash('tu contraseña', PASSWORD_DEFAULT);"
     'admin_hash' => '',

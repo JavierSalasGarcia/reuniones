@@ -258,6 +258,101 @@ if ($accion === 'cita') {
     exit;
 }
 
+// --- minutas -------------------------------------------------------------
+
+if ($accion === 'minuta') {
+    if (empty($_FILES['archivo']['tmp_name']) || (int) $_FILES['archivo']['error'] !== UPLOAD_ERR_OK) {
+        u_json(['error' => 'falta el archivo de la minuta'], 400);
+        exit;
+    }
+    $temporal = (string) $_FILES['archivo']['tmp_name'];
+    if ((int) $_FILES['archivo']['size'] > 10485760) {
+        u_json(['error' => 'la minuta pesa demasiado'], 400);
+        exit;
+    }
+    if (strtolower(pathinfo((string) $_FILES['archivo']['name'], PATHINFO_EXTENSION)) !== 'pdf') {
+        u_json(['error' => 'solo se aceptan minutas en PDF'], 400);
+        exit;
+    }
+    $guardado = carpeta_subidas() . '/minutas/tmp-' . u_token(8) . '.pdf';
+    if (!is_dir(dirname($guardado))) {
+        mkdir(dirname($guardado), 0770, true);
+    }
+    if (!move_uploaded_file($temporal, $guardado) && !rename($temporal, $guardado)) {
+        u_json(['error' => 'no se pudo recibir el archivo'], 500);
+        exit;
+    }
+    try {
+        $minuta = guardar_minuta($dep, [
+            'persona' => $_POST['persona'] ?? '',
+            'email' => $_POST['email'] ?? '',
+            'asunto' => $_POST['asunto'] ?? '',
+            'fecha' => $_POST['fecha'] ?? '',
+            'reunion_local' => isset($_POST['reunion_local']) ? (int) $_POST['reunion_local'] : null,
+        ], $guardado);
+    } catch (Throwable $error) {
+        @unlink($guardado);
+        u_json(['error' => $error->getMessage()], 500);
+        exit;
+    }
+    u_json(['ok' => true, 'minuta' => $minuta]);
+    exit;
+}
+
+if ($accion === 'minuta_enviar') {
+    $registro = minuta((int) ($cuerpo['id'] ?? 0), (int) $dep['id']);
+    if ($registro === null) {
+        u_json(['error' => 'esa minuta no esta en el servidor'], 404);
+        exit;
+    }
+    $destinatario = u_email($cuerpo['destinatario'] ?? $registro['email']);
+    if (!filter_var($destinatario, FILTER_VALIDATE_EMAIL)) {
+        u_json(['error' => 'el destinatario no es valido'], 400);
+        exit;
+    }
+    $enviado = correo_minuta($dep, $registro, $destinatario, (string) ($cuerpo['mensaje'] ?? ''));
+    marcar_minuta((int) $registro['id'], $enviado, $destinatario,
+        $enviado ? 'enviada desde el servidor' : 'el servidor de correo no acepto el mensaje');
+    evento((int) $dep['id'], $enviado ? 'minuta-enviada' : 'minuta-error', $destinatario);
+    if (!$enviado) {
+        u_json(['error' => 'el servidor de correo no acepto el mensaje',
+                'minuta' => minuta((int) $registro['id'], (int) $dep['id'])], 502);
+        exit;
+    }
+    u_json(['ok' => true, 'minuta' => minuta((int) $registro['id'], (int) $dep['id'])]);
+    exit;
+}
+
+if ($accion === 'minutas') {
+    limpiar_minutas($dep);
+    u_json(['minutas' => minutas_de((int) $dep['id'], (string) ($_GET['email'] ?? ''))]);
+    exit;
+}
+
+if ($accion === 'minuta_borrar') {
+    $registro = minuta((int) ($cuerpo['id'] ?? 0), (int) $dep['id']);
+    if ($registro === null) {
+        u_json(['error' => 'esa minuta no esta en el servidor'], 404);
+        exit;
+    }
+    borrar_minuta($registro);
+    u_json(['ok' => true]);
+    exit;
+}
+
+if ($accion === 'minuta_descargar') {
+    $registro = minuta((int) ($_GET['id'] ?? 0), (int) $dep['id']);
+    $ruta = $registro ? ruta_subida((string) $registro['archivo']) : '';
+    if (!$registro || !is_file($ruta)) {
+        u_json(['error' => 'esa minuta no esta en el servidor'], 404);
+        exit;
+    }
+    header('Content-Type: application/pdf');
+    header('Content-Disposition: attachment; filename="' . $registro['nombre'] . '"');
+    readfile($ruta);
+    exit;
+}
+
 if ($accion === 'adjunto') {
     $adjunto = fila_una('SELECT a.* FROM adjuntos a JOIN citas c ON c.id = a.cita_id '
         . 'WHERE a.id = ? AND c.dependencia_id = ?', [(int) ($_GET['id'] ?? 0), $dep['id']]);

@@ -12,13 +12,17 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from . import config, util
 
 
 class ErrorNube(Exception):
     """Falla de configuracion o de comunicacion con el sitio publico."""
+
+
+class ErrorEnvio(ErrorNube):
+    """El servidor recibio la minuta pero el correo no salio."""
 
 
 @dataclass
@@ -204,10 +208,16 @@ def generar_qr(destino: Path | None = None) -> Path:
 # --- sincronizacion de fondo ---------------------------------------------
 
 class Latido:
-    """Consulta el sitio cada tanto para que los avisos por correo salgan solos."""
+    """Consulta el sitio cada tanto para que los avisos por correo salgan solos.
 
-    def __init__(self, segundos: int | None = None) -> None:
+    `al_latir` permite colgar tareas que dependen de tener conexion, como
+    reintentar los envios de minuta que quedaron pendientes.
+    """
+
+    def __init__(self, segundos: int | None = None,
+                 al_latir: Callable[[], None] | None = None) -> None:
         self.segundos = segundos or config.actual().nube.latido_segundos
+        self.al_latir = al_latir
         self._parar = threading.Event()
         self._hilo: threading.Thread | None = None
 
@@ -221,7 +231,12 @@ class Latido:
                 try:
                     estado(forzar=True)
                 except ErrorNube:
-                    pass   # sin internet el panel sigue mostrando lo ultimo conocido
+                    continue   # sin internet, el panel sigue con lo ultimo conocido
+                if self.al_latir is not None:
+                    try:
+                        self.al_latir()
+                    except Exception:
+                        pass   # una tarea colgada no debe matar el latido
 
         self._hilo = threading.Thread(target=girar, name="latido-nube", daemon=True)
         self._hilo.start()
@@ -242,3 +257,96 @@ def hora(texto: str | None) -> str:
 
 def turnos_por_estado(datos: dict, estado_buscado: str) -> list[dict]:
     return [t for t in datos.get("turnos", []) if t.get("estado") == estado_buscado]
+
+
+# --- minutas en el servidor ----------------------------------------------
+#
+# El correo institucional rechaza lo que sale de la laptop, asi que la minuta
+# en PDF sube al servidor y desde alli se envia. Solo sube la minuta: la
+# transcripcion original nunca sale de este equipo.
+
+def subir_minuta(pdf: Path, persona: str, email: str, asunto: str = "",
+                 fecha: datetime | str | None = None, reunion_local: int | None = None) -> dict:
+    listo, motivo = configurada()
+    if not listo:
+        raise ErrorNube(motivo)
+    if not pdf.is_file():
+        raise ErrorNube(f"No encuentro el archivo {pdf}.")
+    cfg = config.actual()
+    if isinstance(fecha, datetime):
+        fecha = fecha.strftime("%Y-%m-%d %H:%M:%S")
+
+    datos = {"persona": persona, "email": email, "asunto": asunto,
+             "fecha": fecha or "", "reunion_local": str(reunion_local or "")}
+    try:
+        with _cliente() as cliente:
+            respuesta = cliente.post(
+                "/api",
+                params={"d": cfg.nube.dependencia, "accion": "minuta"},
+                data=datos,
+                files={"archivo": (pdf.name, pdf.read_bytes(), "application/pdf")},
+            )
+    except Exception as error:
+        raise ErrorNube(f"No se pudo subir la minuta: {error}") from error
+
+    if respuesta.status_code == 401:
+        raise ErrorNube("El sitio rechazó el token. Regenéralo en el panel de administración.")
+    if respuesta.status_code >= 400:
+        raise ErrorNube(f"El servidor no aceptó la minuta: {respuesta.text[:200]}")
+    return respuesta.json().get("minuta", {})
+
+
+def enviar_minuta(minuta_id: int, destinatario: str, mensaje: str = "") -> dict:
+    """Pide al servidor que mande la minuta que ya tiene guardada.
+
+    Distingue dos fracasos distintos: no alcanzar el servidor, que se puede
+    reintentar, y que el servidor de correo rechace el mensaje, que no.
+    """
+    listo, motivo = configurada()
+    if not listo:
+        raise ErrorNube(motivo)
+    cfg = config.actual()
+    try:
+        with _cliente() as cliente:
+            respuesta = cliente.post(
+                "/api",
+                params={"d": cfg.nube.dependencia, "accion": "minuta_enviar"},
+                json={"id": minuta_id, "destinatario": destinatario, "mensaje": mensaje},
+            )
+    except Exception as error:
+        raise ErrorNube(f"No se pudo hablar con el servidor: {error}") from error
+
+    if respuesta.status_code == 502:
+        detalle = ""
+        try:
+            detalle = respuesta.json().get("error", "")
+        except ValueError:
+            pass
+        raise ErrorEnvio(detalle or "El servidor de correo no aceptó el mensaje.")
+    if respuesta.status_code == 401:
+        raise ErrorNube("El sitio rechazó el token. Regenéralo en el panel de administración.")
+    if respuesta.status_code >= 400:
+        raise ErrorNube(f"El servidor respondió {respuesta.status_code}: {respuesta.text[:200]}")
+    _tras_escribir({})
+    return respuesta.json()
+
+
+def minutas(email: str = "") -> list[dict]:
+    listo, motivo = configurada()
+    if not listo:
+        raise ErrorNube(motivo)
+    cfg = config.actual()
+    parametros = {"d": cfg.nube.dependencia, "accion": "minutas"}
+    if email:
+        parametros["email"] = email
+    try:
+        with _cliente() as cliente:
+            respuesta = cliente.get("/api", params=parametros)
+            respuesta.raise_for_status()
+    except Exception as error:
+        raise ErrorNube(f"No se pudo consultar el expediente del servidor: {error}") from error
+    return respuesta.json().get("minutas", [])
+
+
+def borrar_minuta(minuta_id: int) -> dict:
+    return _llamar("minuta_borrar", {"id": minuta_id}, "POST")

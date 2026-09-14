@@ -320,3 +320,119 @@ function minutos_de_cita(array $dep): array
     $valores = array_map('intval', array_filter(explode(',', (string) $dep['minutos_cita'])));
     return $valores ?: [20, 30, 45];
 }
+
+// --- minutas --------------------------------------------------------------
+//
+// La minuta en PDF se guarda aqui para poder mandarla desde el servidor: el
+// correo institucional rechaza lo que sale de la laptop. Nunca sube la
+// transcripcion original, y los archivos no se sirven por web (ver
+// subidas/.htaccess); solo se bajan por la API con el token de la dependencia.
+
+/** Carpeta donde viven los archivos subidos; las pruebas la mueven a un temporal. */
+function carpeta_subidas(): string
+{
+    return rtrim((string) (config()['carpeta_subidas'] ?? (__DIR__ . '/../subidas')), '/');
+}
+
+/** De 'subidas/minutas/...' a la ruta absoluta en disco. */
+function ruta_subida(string $relativa): string
+{
+    return carpeta_subidas() . '/' . preg_replace('#^subidas/#', '', $relativa);
+}
+
+function carpeta_minutas(array $dep, string $email): string
+{
+    return carpeta_subidas() . '/minutas/' . u_apodo((string) $dep['clave'])
+        . '/' . u_apodo($email ?: 'sin-correo');
+}
+
+function minuta(int $id, int $dependencia): ?array
+{
+    return fila_una('SELECT * FROM minutas WHERE id = ? AND dependencia_id = ?', [$id, $dependencia]);
+}
+
+function minutas_de(int $dependencia, string $email = '', int $limite = 200): array
+{
+    if ($email !== '') {
+        return filas('SELECT * FROM minutas WHERE dependencia_id = ? AND email = ? '
+            . 'ORDER BY fecha DESC, id DESC LIMIT ?', [$dependencia, u_email($email), $limite]);
+    }
+    return filas('SELECT * FROM minutas WHERE dependencia_id = ? ORDER BY id DESC LIMIT ?',
+        [$dependencia, $limite]);
+}
+
+/**
+ * Guarda el PDF que sube la laptop. Si ya estaba (mismo contenido), devuelve
+ * el registro existente en lugar de duplicarlo.
+ */
+function guardar_minuta(array $dep, array $datos, string $temporal): array
+{
+    $sha = hash_file('sha256', $temporal);
+    $previa = fila_una('SELECT * FROM minutas WHERE dependencia_id = ? AND sha256 = ?',
+        [$dep['id'], $sha]);
+    if ($previa !== null && is_file(ruta_subida((string) $previa['archivo']))) {
+        @unlink($temporal);
+        return $previa;
+    }
+
+    $email = u_email($datos['email'] ?? '');
+    $carpeta = carpeta_minutas($dep, $email);
+    if (!is_dir($carpeta) && !mkdir($carpeta, 0770, true) && !is_dir($carpeta)) {
+        throw new RuntimeException('No se pudo crear la carpeta de minutas.');
+    }
+    $fecha = a_momento((string) ($datos['fecha'] ?? '')) ?? new DateTimeImmutable('now');
+    $nombre = $fecha->format('Ymd_Hi') . '_minuta_' . u_apodo((string) ($datos['persona'] ?? '')) . '.pdf';
+    $destino = $carpeta . '/' . $nombre;
+    if (is_file($destino)) {
+        $destino = $carpeta . '/' . $fecha->format('Ymd_Hi') . '-' . substr($sha, 0, 6) . '.pdf';
+    }
+    if (!rename($temporal, $destino)) {
+        throw new RuntimeException('No se pudo guardar la minuta.');
+    }
+    @chmod($destino, 0640);
+
+    $relativa = 'subidas/minutas/' . u_apodo((string) $dep['clave']) . '/'
+        . u_apodo($email ?: 'sin-correo') . '/' . basename($destino);
+    consulta('INSERT INTO minutas (dependencia_id, reunion_local, persona, email, asunto, fecha, '
+        . 'archivo, nombre, bytes, sha256, estado, creado) '
+        . 'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [$dep['id'], $datos['reunion_local'] ?? null, u_limpio($datos['persona'] ?? '', 120), $email,
+         u_limpio($datos['asunto'] ?? '', 200), $fecha->format('Y-m-d H:i:s'), $relativa,
+         basename($destino), filesize($destino), $sha, 'guardada', ahora_texto()]);
+    evento((int) $dep['id'], 'minuta-guardada', "{$email} · " . basename($destino));
+
+    return minuta((int) db()->lastInsertId(), (int) $dep['id']);
+}
+
+function marcar_minuta(int $id, bool $ok, string $destinatario, string $detalle = ''): void
+{
+    consulta('UPDATE minutas SET estado = ?, destinatario = ?, detalle = ?, enviado = ? WHERE id = ?',
+        [$ok ? 'enviada' : 'error', $destinatario, mb_substr($detalle, 0, 255),
+         $ok ? ahora_texto() : null, $id]);
+}
+
+function borrar_minuta(array $minuta): void
+{
+    $ruta = ruta_subida((string) $minuta['archivo']);
+    if (is_file($ruta)) {
+        @unlink($ruta);
+    }
+    consulta('DELETE FROM minutas WHERE id = ?', [$minuta['id']]);
+    evento((int) $minuta['dependencia_id'], 'minuta-borrada', (string) $minuta['email']);
+}
+
+/** Retencion: 0 dias significa conservarlas mientras exista el expediente. */
+function limpiar_minutas(array $dep, ?int $dias = null): int
+{
+    $dias = $dias ?? (int) (config()['minutas_dias'] ?? 0);
+    if ($dias <= 0) {
+        return 0;
+    }
+    $limite = (new DateTimeImmutable('now'))->modify("-{$dias} days")->format('Y-m-d H:i:s');
+    $viejas = filas('SELECT * FROM minutas WHERE dependencia_id = ? AND creado < ?',
+        [$dep['id'], $limite]);
+    foreach ($viejas as $vieja) {
+        borrar_minuta($vieja);
+    }
+    return count($viejas);
+}

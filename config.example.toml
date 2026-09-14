@@ -35,7 +35,10 @@ ventana_horas_atras = 3
 ventana_minutos_adelante = 30
 
 [correo]
-# Todo el correo del sistema sale por el SMTP de fingenieria.mx.
+# Todo el correo sale por fingenieria.mx. Con via = "servidor" la minuta sube
+# al hosting y el correo se manda desde alli, que es lo que acepta el servidor
+# institucional. Con via = "laptop" se manda por SMTP desde este equipo.
+via = "servidor"
 servidor = "mail.fingenieria.mx"
 puerto = 587
 starttls = true

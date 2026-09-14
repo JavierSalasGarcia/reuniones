@@ -51,7 +51,13 @@
 
   <section>
     <h2>Enviar la minuta</h2>
-    <p class="apunte">Se envía solo la minuta en PDF. La transcripción original nunca sale.</p>
+    {% if aviso %}<p class="error">{{ aviso }}</p>{% endif %}
+    {% if enviado %}<p class="exito">Minuta enviada.</p>{% endif %}
+    {% if pendiente %}<p class="aviso">Sin conexión con el servidor: el envío quedó pendiente
+      y saldrá solo en cuanto vuelva.</p>{% endif %}
+    <p class="apunte">Se envía solo la minuta en PDF; la transcripción original nunca sale.
+      {% if por_servidor %}El PDF sube a fingenieria.mx y el correo sale de ahí, porque el
+      servidor institucional rechaza lo que se manda desde esta laptop.{% endif %}</p>
     {% if correo_listo %}
     <form method="post" action="/reunion/{{ reunion.id }}/enviar" class="formulario compacto">
       <input name="destinatario" value="{{ reunion.email }}" type="email">
@@ -63,7 +69,10 @@
     {% if envios %}
     <ul class="lista chica">
       {% for e in envios %}
-      <li>{{ e.enviado|fecha }} · {{ e.destinatario }} · <span class="{{ 'error' if e.estado == 'error' else '' }}">{{ e.estado }}</span></li>
+      <li>{{ e.enviado|fecha }} · {{ e.destinatario }} ·
+        <span class="{{ 'error' if e.estado == 'error' else '' }}">{{ e.estado }}</span>
+        {% if e.estado != 'enviado' and e.detalle %}<span class="meta">{{ e.detalle|recorte(90) }}</span>{% endif %}
+      </li>
       {% endfor %}
     </ul>
     {% endif %}

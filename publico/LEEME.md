@@ -24,8 +24,11 @@ php -r "echo password_hash('la contraseña que quieras', PASSWORD_DEFAULT);"
 ```
 
 Asegúrate de que `subidas/` tenga permisos de escritura (750 o 770) y de que su
-`.htaccess` esté presente: los archivos que adjunta la gente no deben servirse por web,
-solo bajarlos tu laptop a través de la API.
+`.htaccess` esté presente: ni los archivos que adjunta la gente ni las minutas deben
+servirse por web; solo se bajan por la API con el token de la dependencia.
+
+Si ya tenías la base creada de una instalación anterior, importa además
+`migraciones/001_minutas.sql`, que agrega la tabla donde viven las minutas.
 
 Si tu hosting no tiene `mod_rewrite`, todo sigue funcionando con la forma larga de las
 direcciones: `https://fingenieria.mx/citas/index.php?r=sa`.
@@ -48,11 +51,18 @@ una reunión más larga con descripción y archivos. `/citas/sa/fila` es la fila
 para el celular. `/citas/sa/pantalla` es la vista de pantalla completa para el monitor
 de la entrada. `/citas/admin` es el panel de dependencias.
 
-## Correo
+## Correo y minutas
 
-El modo `mail` usa la función de PHP del hosting y suele bastar. Si los correos no
-llegan a las cuentas de la UAEM, cambia a modo `smtp` y pon las credenciales del buzón
-de `fingenieria.mx`; el sistema habla SMTP directo con STARTTLS.
+Todo el correo sale de aquí por SMTP con las credenciales del buzón de `fingenieria.mx`:
+los códigos de verificación, los avisos de la fila y también las minutas. La laptop sube
+el PDF de la minuta por la API, el servidor lo guarda en `subidas/minutas/<dependencia>/
+<persona>/` y lo manda como adjunto. La transcripción original nunca sube.
+
+Con `minutas_dias => 0` las minutas se conservan mientras exista el expediente; si pones
+un número, las más viejas se borran solas cuando la laptop consulta el expediente.
+
+El modo `mail`, que usa la función de PHP del hosting, queda como alternativa si el buzón
+SMTP diera problemas.
 
 ## Pruebas
 

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block titulo %}Minutas en el servidor{% endblock %}
+{% block contenido %}
+<p class="migas"><a href="/persona/{{ persona.id }}">{{ persona.nombre }}</a></p>
+<h1>Minutas en el servidor</h1>
+<p class="apunte">Copias que viven en fingenieria.mx para poder enviarlas desde allá.
+  El expediente completo, con las transcripciones originales, sigue solo en esta laptop.</p>
+
+{% if aviso %}<p class="aviso">{{ aviso }}</p>{% endif %}
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+{% if minutas %}
+<table class="tabla">
+  <thead><tr><th>Reunión</th><th>Asunto</th><th>Estado</th><th></th></tr></thead>
+  <tbody>
+    {% for m in minutas %}
+    <tr>
+      <td>{{ m.fecha|fecha }}<br><span class="meta">{{ m.nombre }}</span></td>
+      <td>{{ m.asunto or 'Sin asunto' }}</td>
+      <td>
+        <span class="{{ 'error' if m.estado == 'error' else '' }}">{{ m.estado }}</span>
+        {% if m.enviado %}<br><span class="meta">{{ m.enviado|fecha }} a {{ m.destinatario }}</span>{% endif %}
+        {% if m.estado == 'error' and m.detalle %}<br><span class="meta">{{ m.detalle|recorte(80) }}</span>{% endif %}
+      </td>
+      <td class="acciones-fila">
+        <form method="post" action="/servidor/minuta/{{ m.id }}/reenviar">
+          <input type="hidden" name="persona_id" value="{{ persona.id }}">
+          <input type="hidden" name="destinatario" value="{{ persona.email }}">
+          <button class="secundario">Reenviar</button>
+        </form>
+        <form method="post" action="/servidor/minuta/{{ m.id }}/borrar"
+              onsubmit="return confirm('Se borra la copia del servidor. ¿Continuar?')">
+          <input type="hidden" name="persona_id" value="{{ persona.id }}">
+          <button class="secundario">Borrar del servidor</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% elif not error %}
+<p class="vacio">No hay minutas de esta persona en el servidor.</p>
+{% endif %}
+{% endblock %}

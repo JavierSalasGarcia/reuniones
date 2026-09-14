@@ -26,6 +26,12 @@ vigilante: ingesta.Vigilante | None = None
 latido: nube.Latido | None = None
 
 
+def _reintentar_envios() -> None:
+    """Lo que no salió por falta de conexión se vuelve a intentar solo."""
+    with db.sesion() as con:
+        correo.reintentar_pendientes(con)
+
+
 @asynccontextmanager
 async def ciclo(app: FastAPI):
     global vigilante, latido
@@ -37,7 +43,7 @@ async def ciclo(app: FastAPI):
     mantenimiento.limpiar_temporal()
     vigilante = ingesta.Vigilante()
     vigilante.iniciar()
-    latido = nube.Latido()
+    latido = nube.Latido(al_latir=_reintentar_envios)
     latido.iniciar()
     try:
         yield
@@ -223,6 +229,10 @@ def ver_reunion(request: Request, reunion_id: int, con: sqlite3.Connection = Dep
     originales = expediente.archivos_de(con, reunion_id, "original")
     listo_correo, motivo_correo = correo.configurado()
     return _pagina(request, "reunion.html",
+                   aviso=request.query_params.get("error", ""),
+                   enviado=request.query_params.get("enviado", ""),
+                   pendiente=request.query_params.get("pendiente", ""),
+                   por_servidor=correo.por_servidor(),
                    reunion=fila,
                    minuta=expediente.texto_de(minutas[-1]) if minutas else "",
                    original=expediente.texto_de(originales[-1]) if originales else "",
@@ -286,9 +296,11 @@ def pdf_minuta(reunion_id: int, con: sqlite3.Connection = Depends(base_datos)):
 def enviar(reunion_id: int, destinatario: str = Form(""), mensaje: str = Form(""),
            con: sqlite3.Connection = Depends(base_datos)):
     try:
-        correo.enviar_minuta(con, reunion_id, destinatario or None, mensaje)
+        resultado = correo.enviar_minuta(con, reunion_id, destinatario or None, mensaje)
     except (correo.ErrorCorreo, ValueError) as error:
         return RedirectResponse(f"/reunion/{reunion_id}?error={error}", status_code=303)
+    if resultado.get("estado") == "pendiente":
+        return RedirectResponse(f"/reunion/{reunion_id}?pendiente=1", status_code=303)
     return RedirectResponse(f"/reunion/{reunion_id}?enviado=1", status_code=303)
 
 
@@ -519,3 +531,40 @@ def codigo_qr():
     except nube.ErrorNube as error:
         raise HTTPException(503, str(error))
     return FileResponse(ruta, media_type="image/png", filename=ruta.name)
+
+
+# --- minutas guardadas en el servidor ------------------------------------
+
+@app.get("/persona/{persona_id}/servidor", response_class=HTMLResponse)
+def minutas_en_servidor(request: Request, persona_id: int,
+                        con: sqlite3.Connection = Depends(base_datos)):
+    """Lo que hay en fingenieria.mx de esta persona, para reenviar o borrar."""
+    fila = _persona(con, persona_id)
+    try:
+        guardadas = nube.minutas(fila["email"])
+        error = ""
+    except nube.ErrorNube as fallo:
+        guardadas, error = [], str(fallo)
+    return _pagina(request, "servidor.html", persona=fila, minutas=guardadas, error=error,
+                   aviso=request.query_params.get("aviso", ""))
+
+
+@app.post("/servidor/minuta/{minuta_id}/reenviar")
+def reenviar_minuta(minuta_id: int, persona_id: int = Form(...), destinatario: str = Form(...),
+                    mensaje: str = Form("")):
+    try:
+        nube.enviar_minuta(minuta_id, destinatario, mensaje)
+    except nube.ErrorNube as error:
+        return RedirectResponse(f"/persona/{persona_id}/servidor?aviso={error}", status_code=303)
+    return RedirectResponse(f"/persona/{persona_id}/servidor?aviso=Minuta reenviada.",
+                            status_code=303)
+
+
+@app.post("/servidor/minuta/{minuta_id}/borrar")
+def borrar_minuta_servidor(minuta_id: int, persona_id: int = Form(...)):
+    try:
+        nube.borrar_minuta(minuta_id)
+    except nube.ErrorNube as error:
+        return RedirectResponse(f"/persona/{persona_id}/servidor?aviso={error}", status_code=303)
+    return RedirectResponse(f"/persona/{persona_id}/servidor?aviso=Se borró del servidor; "
+                            f"la copia de tu laptop sigue intacta.", status_code=303)

@@ -37,3 +37,10 @@ CREATE TABLE verificaciones (
 CREATE TABLE eventos (
   id INTEGER PRIMARY KEY AUTOINCREMENT, dependencia_id INTEGER, momento TEXT NOT NULL,
   accion TEXT NOT NULL, detalle TEXT NOT NULL DEFAULT '');
+CREATE TABLE minutas (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, dependencia_id INTEGER NOT NULL, reunion_local INTEGER,
+  persona TEXT NOT NULL DEFAULT '', email TEXT NOT NULL DEFAULT '', asunto TEXT NOT NULL DEFAULT '',
+  fecha TEXT, archivo TEXT NOT NULL, nombre TEXT NOT NULL, bytes INTEGER NOT NULL DEFAULT 0,
+  sha256 TEXT NOT NULL, estado TEXT NOT NULL DEFAULT 'guardada', destinatario TEXT NOT NULL DEFAULT '',
+  detalle TEXT NOT NULL DEFAULT '', creado TEXT NOT NULL, enviado TEXT,
+  UNIQUE (dependencia_id, sha256));

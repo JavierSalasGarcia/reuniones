@@ -113,10 +113,20 @@ desconocido. La búsqueda por nombre siempre está disponible como respaldo.
 
 ## Correo
 
-Todo el correo del sistema sale por el SMTP de `fingenieria.mx`: los códigos de
-verificación y los avisos de turno desde el hosting, y las minutas desde tu laptop. En
-`config.toml` puedes poner tu correo institucional en `responder_a` para que las
-respuestas de las personas te lleguen a tu buzón de siempre.
+Todo el correo sale del servidor de `fingenieria.mx`, porque el servidor institucional
+rechaza los mensajes que se mandan desde una laptop. Al enviar una minuta, el PDF sube al
+hosting, queda guardado ahí en el expediente de esa persona y el correo se manda desde
+allá. Solo sube la minuta: la transcripción original nunca sale de tu equipo.
+
+Si en ese momento no hay conexión, el envío queda marcado como pendiente y sale solo en
+cuanto vuelve la red, sin que tengas que repetir nada. Desde la ficha de cada persona,
+el enlace «Minutas en el servidor» muestra lo que hay allá, con botones para reenviar o
+para borrar esa copia; la de tu laptop no se toca.
+
+En `config.toml` conviene poner tu correo institucional en `responder_a` para que las
+respuestas de las personas lleguen a tu buzón de siempre. Si algún día el correo
+institucional aceptara los mensajes de tu equipo, `via = "laptop"` regresa al envío
+directo por SMTP.
 
 ## Privacidad
 

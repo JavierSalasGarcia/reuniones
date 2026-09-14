@@ -187,3 +187,29 @@ def test_la_agenda_muestra_el_horario_publicado(cliente, entorno, monkeypatch):
     pagina = cliente.get("/agenda").text
     assert "Horario semanal" in pagina and "09:00" in pagina
     nube._cache.datos, nube._cache.momento = {}, 0.0
+
+
+def test_la_pagina_de_minutas_del_servidor_lista_lo_guardado(cliente, entorno, monkeypatch):
+    from reuniones import nube
+
+    persona_id, _ = _persona_con_reunion(cliente, entorno)
+    monkeypatch.setattr(nube, "minutas", lambda email="": [
+        {"id": 5, "fecha": "2026-09-14 10:30:00", "nombre": "20260914_1030_minuta_ana.pdf",
+         "asunto": "Revalidación", "estado": "enviada", "enviado": "2026-09-14 11:00:00",
+         "destinatario": "ana@uaemex.mx", "detalle": ""}])
+    pagina = cliente.get(f"/persona/{persona_id}/servidor").text
+    assert "20260914_1030_minuta_ana.pdf" in pagina
+    assert "Reenviar" in pagina
+
+
+def test_si_el_servidor_no_responde_la_pagina_lo_dice(cliente, entorno, monkeypatch):
+    from reuniones import nube
+
+    persona_id, _ = _persona_con_reunion(cliente, entorno)
+
+    def truena(email=""):
+        raise nube.ErrorNube("No se pudo consultar el expediente del servidor: sin red")
+
+    monkeypatch.setattr(nube, "minutas", truena)
+    pagina = cliente.get(f"/persona/{persona_id}/servidor").text
+    assert "sin red" in pagina
