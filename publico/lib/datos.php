@@ -438,6 +438,38 @@ function cancelar_cita(array $cita, string $quien = 'persona'): void
     evento((int) $cita['dependencia_id'], 'cita-cancelada', "{$cita['email']} · {$quien}");
 }
 
+/**
+ * Nueva solicitud a partir de una cita cancelada o rechazada, conservando
+ * nombre, correo, asunto, descripcion y los archivos que ya habia enviado.
+ * El enlace llego a su buzon, asi que no se le vuelve a pedir el codigo.
+ */
+function reagendar_cita(array $previa, string $propuesta, ?int $minutos = null): array
+{
+    $dep = dependencia_id((int) $previa['dependencia_id']);
+    if ($dep === null) {
+        throw new RuntimeException('La dependencia ya no existe.');
+    }
+    $nueva = crear_cita($dep, (string) $previa['nombre'], (string) $previa['email'],
+        (string) $previa['asunto'], (string) $previa['descripcion'],
+        $minutos ?: (int) $previa['minutos'], $propuesta);
+
+    // Los adjuntos se reaprovechan: apuntan al mismo archivo ya subido.
+    foreach (adjuntos_de((int) $previa['id']) as $adjunto) {
+        consulta('INSERT INTO adjuntos (cita_id, nombre, ruta, tipo, bytes, creado) '
+            . 'VALUES (?, ?, ?, ?, ?, ?)',
+            [$nueva['id'], $adjunto['nombre'], $adjunto['ruta'], $adjunto['tipo'],
+             $adjunto['bytes'], ahora_texto()]);
+    }
+    evento((int) $dep['id'], 'cita-reagendada', (string) $previa['email']);
+    return $nueva;
+}
+
+/** Una cita cancelada o rechazada se puede reagendar una sola vez por enlace. */
+function puede_reagendarse(?array $cita): bool
+{
+    return $cita !== null && in_array((string) $cita['estado'], ['cancelada', 'rechazada'], true);
+}
+
 // --- verificacion por correo --------------------------------------------
 
 function verificacion_crear(array $dep, string $email, array $carga): array

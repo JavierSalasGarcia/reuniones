@@ -211,3 +211,42 @@ Pruebas::caso('de la reunion en curso se sabe cuanto falta', function () {
     Pruebas::igual(-6, $pasado['restan'], 'se pasaron seis minutos');
     Pruebas::igual(16, $pasado['transcurridos']);
 });
+
+Pruebas::caso('una cita cancelada se reagenda conservando datos y archivos', function () {
+    $dep = base_con_jornada();
+    $cita = crear_cita($dep, 'Sara Díaz', 'sara@uaemex.mx', 'Proyecto de titulación',
+        'Llevo dos capítulos escritos.', 30, hoy('13:00'));
+    consulta('INSERT INTO adjuntos (cita_id, nombre, ruta, tipo, bytes, creado) VALUES (?,?,?,?,?,?)',
+        [$cita['id'], 'borrador.pdf', 'subidas/citas/1/borrador.pdf', 'application/pdf', 1024,
+         ahora_texto()]);
+    aprobar_cita($cita);
+    cancelar_cita(cita_por_token($cita['token']), 'titular');
+
+    $previa = cita_por_token($cita['token']);
+    Pruebas::cierto(puede_reagendarse($previa));
+
+    $nueva = reagendar_cita($previa, (new DateTimeImmutable('now'))->modify('+2 days')
+        ->format('Y-m-d 11:00:00'));
+
+    Pruebas::igual('sara@uaemex.mx', $nueva['email']);
+    Pruebas::igual('Proyecto de titulación', $nueva['asunto']);
+    Pruebas::igual('Llevo dos capítulos escritos.', $nueva['descripcion']);
+    Pruebas::igual(30, (int) $nueva['minutos']);
+    Pruebas::igual('solicitada', $nueva['estado']);
+    Pruebas::cierto($nueva['token'] !== $previa['token'], 'es otra solicitud');
+
+    $archivos = adjuntos_de((int) $nueva['id']);
+    Pruebas::igual(1, count($archivos));
+    Pruebas::igual('borrador.pdf', $archivos[0]['nombre'], 'no tiene que volver a subirlo');
+});
+
+Pruebas::caso('una cita vigente no se reagenda por enlace', function () {
+    $dep = base_con_jornada();
+    $cita = crear_cita($dep, 'Sara Díaz', 'sara@uaemex.mx', 'Proyecto', '', 30, hoy('13:00'));
+    Pruebas::igual(false, puede_reagendarse($cita), 'una solicitud pendiente sigue su curso');
+    aprobar_cita($cita);
+    Pruebas::igual(false, puede_reagendarse(cita_por_token($cita['token'])));
+
+    rechazar_cita(cita_por_token($cita['token']), 'Ese día estaré fuera');
+    Pruebas::cierto(puede_reagendarse(cita_por_token($cita['token'])), 'rechazada sí');
+});

@@ -210,7 +210,8 @@ function correo_cita_resuelta(array $dep, array $cita, string $enlace): void
     $motivo = $cita['motivo'] ? "\n\nMotivo: {$cita['motivo']}" : '';
     correo_enviar($cita['email'], "Solicitud de reunión no confirmada · {$dep['nombre']}",
         "Tu solicitud de reunión con {$dep['titular']} no pudo confirmarse en la fecha propuesta."
-        . $motivo . "\n\nPuedes proponer otra fecha desde la página de la dependencia.");
+        . $motivo . "\n\nPuedes elegir otra fecha aquí, sin volver a escribir tus datos "
+        . "ni adjuntar de nuevo tus archivos:\n{$enlace}");
 }
 
 /** Manda la minuta en PDF desde el servidor, con copia guardada en el expediente. */
@@ -262,6 +263,7 @@ function correo_cita_cancelada(array $dep, array $cita, string $motivo, string $
     $razon = trim($motivo) !== '' ? "\n\nMotivo: {$motivo}" : '';
     correo_enviar($cita['email'], "Se canceló tu reunión · {$dep['nombre']}",
         "Tu reunión con {$dep['titular']} del {$cuando} tuvo que cancelarse." . $razon . "\n\n"
-        . "Puedes elegir otra fecha aquí, sin volver a empezar el trámite:\n{$enlace}\n\n"
+        . "Puedes elegir otra fecha aquí, sin volver a escribir tus datos ni adjuntar "
+        . "de nuevo tus archivos:\n{$enlace}\n\n"
         . "Una disculpa por el cambio.\n{$dep['titular']}");
 }

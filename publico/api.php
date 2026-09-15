@@ -343,13 +343,12 @@ if ($accion === 'cita') {
         correo_cita_resuelta($dep, $resuelta, $enlace);
     } elseif ((string) ($cuerpo['accion'] ?? '') === 'rechazar') {
         $resuelta = rechazar_cita($cita, u_limpio($cuerpo['motivo'] ?? '', 255));
-        correo_cita_resuelta($dep, $resuelta, $enlace);
+        correo_cita_resuelta($dep, $resuelta, $reagendar);
     } elseif ((string) ($cuerpo['accion'] ?? '') === 'cancelar') {
         $motivo = u_limpio($cuerpo['motivo'] ?? '', 255);
         cancelar_cita($cita, 'titular');
         $resuelta = cita_por_token((string) $cita['token']);
-        correo_cita_cancelada($dep, $cita, $motivo,
-            rtrim((string) (config()['sitio'] ?? ''), '/') . '/' . $dep['clave']);
+        correo_cita_cancelada($dep, $cita, $motivo, $reagendar);
     } else {
         u_json(['error' => 'accion desconocida'], 400);
         exit;

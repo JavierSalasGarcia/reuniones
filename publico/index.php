@@ -179,6 +179,53 @@ if ($seccion === 'estado.json') {
     exit;
 }
 
+// Reagendar una cita cancelada o rechazada, sin volver a capturar nada.
+if ($seccion === 'reagendar' && isset($partes[2])) {
+    $previa = cita_por_token($partes[2]);
+    if ($previa === null || (int) $previa['dependencia_id'] !== (int) $dep['id']) {
+        aviso('Esa solicitud ya no existe', 'Revisa el enlace que recibiste por correo.', $dep, 404);
+    }
+    if (!puede_reagendarse($previa)) {
+        aviso('Esa solicitud sigue vigente',
+            'Solo se reagendan las citas canceladas o no confirmadas. Consulta la tuya con el '
+            . 'enlace que recibiste.', $dep);
+    }
+
+    $minutos = (int) $previa['minutos'];
+    $libres = huecos($dep, $minutos);
+
+    if ($metodo === 'POST') {
+        if (!csrf_valido()) {
+            aviso('La página caducó', 'Vuelve a abrir el enlace del correo.', $dep, 400);
+        }
+        $elegida = (string) ($_POST['hora'] ?? '');
+        $valida = false;
+        foreach ($libres as $dia) {
+            foreach ($dia['opciones'] as $opcion) {
+                if ($opcion->format('Y-m-d H:i') === $elegida) {
+                    $valida = true;
+                    break 2;
+                }
+            }
+        }
+        if (!$valida) {
+            render('reagendar', ['dep' => $dep, 'cita' => $previa, 'huecos' => $libres,
+                                 'adjuntos' => adjuntos_de((int) $previa['id']),
+                                 'error' => 'Esa hora ya no está libre. Elige otra de la lista.'],
+                ['titulo' => 'Elegir otra fecha']);
+            exit;
+        }
+        $nueva = reagendar_cita($previa, $elegida . ':00');
+        correo_cita_solicitada($dep, $nueva, url_absoluta('c/' . $nueva['token']));
+        u_redirigir(ruta('c/' . $nueva['token']));
+    }
+
+    render('reagendar', ['dep' => $dep, 'cita' => $previa, 'huecos' => $libres,
+                         'adjuntos' => adjuntos_de((int) $previa['id']), 'error' => ''],
+        ['titulo' => 'Elegir otra fecha']);
+    exit;
+}
+
 // Horas libres para agendar, en JSON, cuando cambia la duracion elegida.
 if ($seccion === '' && $metodo === 'GET' && isset($_GET['huecos'])) {
     $minutos = (int) $_GET['huecos'];
