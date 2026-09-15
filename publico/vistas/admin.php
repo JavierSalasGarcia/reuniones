@@ -38,6 +38,19 @@
       </div>
       <label>Tema de avisos al celular (ntfy)
         <input name="push_tema" value="<?= u_escapar($fila['push_tema']) ?>"></label>
+      <?php $avisos = array_map('trim', explode(',', (string) $fila['push_avisos'])); ?>
+      <fieldset class="tiempo">
+        <legend>Cuándo vibra el reloj</legend>
+        <?php foreach ([
+            'formado' => 'Cuando alguien se forma',
+            'excedido' => 'Cuando la reunión en curso se pasa del tiempo',
+            'cita' => 'Cinco minutos antes de una reunión agendada',
+            'vacia' => 'Cuando la cola se queda vacía',
+        ] as $clave => $texto): ?>
+        <label class="casilla"><input type="checkbox" name="push_avisos[]" value="<?= $clave ?>"
+               <?= in_array($clave, $avisos, true) ? 'checked' : '' ?>> <?= $texto ?></label>
+        <?php endforeach; ?>
+      </fieldset>
       <label class="casilla"><input type="checkbox" name="push_detalle" value="1"
              <?= (int) $fila['push_detalle'] === 1 ? 'checked' : '' ?>>
         Incluir nombre y asunto en el aviso</label>

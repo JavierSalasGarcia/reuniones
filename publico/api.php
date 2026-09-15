@@ -8,6 +8,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/lib/datos.php';
 require_once __DIR__ . '/lib/correo.php';
+require_once __DIR__ . '/lib/push.php';
 
 date_default_timezone_set((string) (config()['zona'] ?? 'America/Mexico_City'));
 
@@ -121,6 +122,7 @@ if ($accion === 'estado') {
     $estado = fila_estado($dep);
     $enviados = avisar_recorridos($dep, $estado);
     guardar_estimados($estado);
+    avisos_del_momento($dep, $estado);   // vibra en la muñeca si toca
 
     $solicitudes = [];
     foreach (citas((int) $dep['id'], 'solicitada') as $cita) {
@@ -363,6 +365,7 @@ if ($accion === 'cita') {
  */
 if ($accion === 'reloj') {
     $estado = fila_estado($dep);
+    avisos_del_momento($dep, $estado);   // el reloj tambien sirve de latido
     $esperando = $estado['espera'];
     $siguiente = $esperando[0] ?? null;
     $actual = $estado['actual'];

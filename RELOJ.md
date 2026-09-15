@@ -13,10 +13,29 @@ instrucciones en `reloj/LEEME.md`.
 
 ## Cómo funciona
 
-Cuando alguien toma turno, el servidor de `fingenieria.mx` publica un aviso en un canal
-privado. Tu celular, que está suscrito a ese canal, muestra la notificación, y el reloj
-la repite vibrando en tu muñeca con el texto completo: «Turno 3 · Ana Ruiz» y debajo
-«Revalidación · 10 min · le tocaría 11:20». Al tocarlo se abre la fila en el navegador.
+El servidor de `fingenieria.mx` publica un aviso en un canal privado. Tu celular, que
+está suscrito a ese canal, muestra la notificación, y el reloj la repite vibrando en tu
+muñeca. Al tocarlo se abre la fila en el navegador.
+
+Son cuatro avisos y cada uno se enciende o se apaga por separado desde el panel de
+administración. El primero es cuando alguien se forma, y llega en el momento con el
+texto «Turno 3 · Ana Ruiz» y debajo «Revalidación · 10 min · le tocaría 11:20». El
+segundo avisa una sola vez cuando la persona que está contigo se pasó del tiempo que
+pidió, diciendo «Se pasó el tiempo · Ana Ruiz» y «Llevan 16 de 10 minutos». El tercero
+llega cinco minutos antes de una reunión agendada, sea una cita confirmada o un rato que
+apartaste para una clase o la comida, con la hora y de qué se trata. El cuarto avisa
+cuando la cola se queda vacía y tú sigues atendiendo, por si quieres cerrar o dedicarte
+a otra cosa.
+
+El primero lo dispara la persona al formarse, así que es inmediato. Los otros tres
+dependen del reloj de la pared, y el sistema los revisa cada vez que tu laptop o tu
+reloj consultan al servidor. Con el sitio local encendido, tu laptop consulta cada
+minuto, que es suficiente. Si trabajas con la laptop apagada y aun así quieres esos
+avisos, en cPanel puedes programar una tarea cada cinco minutos que consulte por ti:
+
+```
+curl -s -H "Authorization: Bearer LA-LLAVE-DEL-RELOJ"   "https://fingenieria.mx/citas/api?d=sa&accion=reloj" > /dev/null
+```
 
 ## Instalación
 
@@ -49,8 +68,8 @@ nombre y la hora estimada.
 
 El aviso viaja por un servicio de terceros, así que el nombre y el asunto de la persona
 salen de tus servidores. Si prefieres que no, en el panel de administración desmarca
-«Incluir nombre y asunto en el aviso» y entonces el reloj solo dirá «Nuevo turno 3» con
-la duración y la hora; para saber de quién se trata miras la fila en tu laptop. Si algún
+«Incluir nombre y asunto en el aviso» y entonces los avisos dirán «Nuevo turno 3» o
+«Se pasó el tiempo · Turno 3», sin nombres; para saber de quién se trata miras la fila en tu laptop. Si algún
 día quieres que ni eso salga, ntfy se puede instalar en el propio hosting.
 
 ## La aplicación del reloj

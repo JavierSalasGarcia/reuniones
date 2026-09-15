@@ -8,7 +8,12 @@ CREATE TABLE dependencias (
   atendiendo_turno INTEGER, duracion_max INTEGER NOT NULL DEFAULT 10,
   colchon_turno INTEGER NOT NULL DEFAULT 2, colchon_reunion INTEGER NOT NULL DEFAULT 10,
   minutos_cita TEXT NOT NULL DEFAULT '20,30,45', push_tema TEXT NOT NULL DEFAULT '',
-  push_detalle INTEGER NOT NULL DEFAULT 1, activa INTEGER NOT NULL DEFAULT 1, creado TEXT NOT NULL);
+  push_detalle INTEGER NOT NULL DEFAULT 1,
+  push_avisos TEXT NOT NULL DEFAULT 'formado,excedido,cita,vacia',
+  activa INTEGER NOT NULL DEFAULT 1, creado TEXT NOT NULL);
+CREATE TABLE senales (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, dependencia_id INTEGER NOT NULL, clave TEXT NOT NULL,
+  valor TEXT NOT NULL DEFAULT '', momento TEXT NOT NULL, UNIQUE (dependencia_id, clave));
 CREATE TABLE horarios (
   id INTEGER PRIMARY KEY AUTOINCREMENT, dependencia_id INTEGER NOT NULL, dia INTEGER NOT NULL,
   inicio TEXT NOT NULL, fin TEXT NOT NULL);

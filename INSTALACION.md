@@ -98,7 +98,7 @@ Si tienes PHP por línea de comandos, desde la carpeta del proyecto completo:
 php publico/pruebas/correr.php
 ```
 
-Debe responder «201 comprobaciones correctas». Esas pruebas no tocan tu base de datos
+Debe responder «235 comprobaciones correctas». Esas pruebas no tocan tu base de datos
 real ni mandan correos; usan una base en memoria.
 
 En el navegador, comprueba que `https://fingenieria.mx/citas/sa` muestra el formulario

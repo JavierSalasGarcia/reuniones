@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS dependencias (
   minutos_cita      VARCHAR(40)  NOT NULL DEFAULT '20,30,45',
   push_tema         VARCHAR(80)  NOT NULL DEFAULT '',   -- canal de avisos al celular
   push_detalle      TINYINT(1)   NOT NULL DEFAULT 1,    -- 0 = avisar sin nombre ni asunto
+  push_avisos       VARCHAR(80)  NOT NULL DEFAULT 'formado,excedido,cita,vacia',
   activa            TINYINT(1)   NOT NULL DEFAULT 1,
   creado            DATETIME     NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -168,4 +169,13 @@ CREATE TABLE IF NOT EXISTS jornadas (
   cerrada_en      DATETIME NULL,
   creado          DATETIME NOT NULL,
   UNIQUE KEY (dependencia_id, fecha)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS senales (
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+  dependencia_id  INT NOT NULL,
+  clave           VARCHAR(80) NOT NULL,
+  valor           VARCHAR(80) NOT NULL DEFAULT '',
+  momento         DATETIME NOT NULL,
+  UNIQUE KEY (dependencia_id, clave)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

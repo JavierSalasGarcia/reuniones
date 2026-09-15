@@ -67,13 +67,16 @@ if ($metodo === 'POST' && csrf_valido()) {
         $id = (int) ($_POST['id'] ?? 0);
         consulta('UPDATE dependencias SET nombre = ?, titular = ?, correo_titular = ?, dominio_correo = ?, '
             . 'duracion_max = ?, colchon_turno = ?, colchon_reunion = ?, minutos_cita = ?, '
-            . 'push_tema = ?, push_detalle = ?, activa = ? WHERE id = ?',
+            . 'push_tema = ?, push_detalle = ?, push_avisos = ?, activa = ? WHERE id = ?',
             [u_limpio($_POST['nombre'] ?? '', 120), u_limpio($_POST['titular'] ?? '', 120),
              u_email($_POST['correo'] ?? ''), u_limpio($_POST['dominio'] ?? 'uaemex.mx', 80),
              max(1, (int) ($_POST['duracion_max'] ?? 10)), max(0, (int) ($_POST['colchon_turno'] ?? 2)),
              max(0, (int) ($_POST['colchon_reunion'] ?? 10)),
              u_limpio($_POST['minutos_cita'] ?? '20,30,45', 40),
              u_limpio($_POST['push_tema'] ?? '', 80), empty($_POST['push_detalle']) ? 0 : 1,
+             implode(',', array_intersect(
+                 ['formado', 'excedido', 'cita', 'vacia'],
+                 array_map('strval', (array) ($_POST['push_avisos'] ?? [])))),
              empty($_POST['activa']) ? 0 : 1, $id]);
         $mensaje = 'Datos actualizados.';
     }

@@ -141,11 +141,11 @@ desconocido. La búsqueda por nombre siempre está disponible como respaldo.
 
 ## El reloj
 
-Cuando alguien se forma en la cola, el servidor publica un aviso que llega al celular y
-que el reloj repite vibrando, con el nombre, el asunto y la hora aproximada en que le
-tocaría. Eso no necesita instalar nada en el reloj y se explica en `RELOJ.md`; el canal
-se configura por dependencia en el panel de administración y puede enviarse sin nombre ni
-asunto cuando el caso lo amerite.
+El reloj vibra cuando alguien se forma, cuando la persona que está contigo se pasó del
+tiempo que pidió, cinco minutos antes de una reunión agendada y cuando la cola se queda
+vacía. Cada aviso se enciende o se apaga por separado, y todos pueden ir sin nombres
+cuando el caso lo amerite. Eso no necesita instalar nada en el reloj y se explica en
+`RELOJ.md`.
 
 Además, en `reloj/` está la aplicación para el Galaxy Watch7, que muestra en la muñeca a
 quién atiendes con el tiempo corriendo, quién sigue y cuántos esperan. Incluye el mosaico que se
