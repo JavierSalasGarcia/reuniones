@@ -157,6 +157,15 @@ function correo_smtp(string $para, string $asunto, array $armado, array $cfg,
     return str_starts_with(trim($respuesta), '250');
 }
 
+/** Lo que hay que advertir a quien espera: si no esta, se sigue con el siguiente. */
+const AVISO_PUNTUALIDAD_COLA =
+    "Ten en cuenta que la atención sigue el orden de la fila: si no estás presente "
+    . "cuando te toque, se atenderá a quien siga y tendrás que formarte de nuevo.";
+
+const AVISO_PUNTUALIDAD_CITA =
+    "Ten en cuenta que si no estás a la hora acordada se atenderá a quien siga, y la "
+    . "reunión tendrá que agendarse de nuevo.";
+
 // --- mensajes ------------------------------------------------------------
 
 function correo_codigo(array $dep, string $para, string $codigo): void
@@ -174,6 +183,7 @@ function correo_turno(array $dep, array $turno, ?DateTimeImmutable $estimado, st
         "Tomaste el turno {$turno['folio']} con {$dep['titular']}.\n\n"
         . "Hora aproximada de atención: {$hora}\n"
         . "Asunto: {$turno['asunto']}\n\n"
+        . AVISO_PUNTUALIDAD_COLA . "\n\n"
         . "Puedes ver cómo avanza la fila y cancelar tu turno aquí:\n{$enlace}\n\n"
         . "Si no vas a poder llegar, cancela para no retrasar a quienes siguen.");
 }
@@ -183,6 +193,7 @@ function correo_recorrido(array $dep, array $turno, ?DateTimeImmutable $estimado
     $hora = $estimado ? u_hora($estimado) : 'sin hora por hoy';
     correo_enviar($turno['email'], "Tu turno {$turno['folio']} se recorrió · {$dep['nombre']}",
         "La fila se movió y tu turno quedó para las {$hora} aproximadamente.\n\n"
+        . AVISO_PUNTUALIDAD_COLA . "\n\n"
         . "Si a esa hora ya no puedes, cancélalo aquí:\n{$enlace}");
 }
 
@@ -192,7 +203,8 @@ function correo_cita_solicitada(array $dep, array $cita, string $enlace): void
         "Recibimos tu solicitud de reunión con {$dep['titular']}.\n\n"
         . 'Fecha propuesta: ' . u_fecha_larga(a_momento($cita['propuesta'])) . "\n"
         . "Asunto: {$cita['asunto']}\n\n"
-        . "Queda pendiente de confirmación. Te avisaremos por este medio.\n"
+        . "Queda pendiente de confirmación. Te avisaremos por este medio.\n\n"
+        . AVISO_PUNTUALIDAD_CITA . "\n\n"
         . "Puedes consultarla o cancelarla aquí:\n{$enlace}");
 }
 
@@ -204,6 +216,7 @@ function correo_cita_resuelta(array $dep, array $cita, string $enlace): void
             "Tu reunión con {$dep['titular']} quedó confirmada para el {$cuando}.\n\n"
             . "Asunto: {$cita['asunto']}\n"
             . "Duración prevista: {$cita['minutos']} minutos.\n\n"
+            . AVISO_PUNTUALIDAD_CITA . "\n\n"
             . "Si necesitas cancelarla:\n{$enlace}");
         return;
     }

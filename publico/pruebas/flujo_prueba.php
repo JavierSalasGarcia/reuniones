@@ -186,3 +186,36 @@ Pruebas::caso('quien esta siendo atendido aparece como turno actual', function (
     Pruebas::igual(1, (int) $estado['actual']['folio']);
     Pruebas::igual(0, count($estado['espera']));
 });
+
+Pruebas::caso('el correo del turno advierte que se pasa al siguiente', function () {
+    $dep = base_de_prueba();
+    $turno = crear_turno($dep, 'Ana Ruiz', 'ana@uaemex.mx', 'Revalidación', 10);
+    correo_turno($dep, $turno, momento_hoy('10:30'), 'https://fingenieria.mx/citas/t/abc');
+
+    $aviso = end($GLOBALS['_correos_enviados'])['cuerpo'];
+    Pruebas::cierto(str_contains($aviso, 'si no estás presente'), 'lo dice con todas sus letras');
+    Pruebas::cierto(str_contains($aviso, 'tendrás que formarte de nuevo'));
+});
+
+Pruebas::caso('el correo de la cita advierte lo mismo', function () {
+    $dep = base_de_prueba();
+    $cita = crear_cita($dep, 'Sara Díaz', 'sara@uaemex.mx', 'Proyecto', '', 30, hoy('13:00'));
+    correo_cita_solicitada($dep, $cita, 'https://fingenieria.mx/citas/c/abc');
+    Pruebas::cierto(str_contains(end($GLOBALS['_correos_enviados'])['cuerpo'],
+        'si no estás a la hora acordada'), 'desde que la solicita');
+
+    $aprobada = aprobar_cita($cita);
+    correo_cita_resuelta($dep, $aprobada, 'https://fingenieria.mx/citas/c/abc');
+    Pruebas::cierto(str_contains(end($GLOBALS['_correos_enviados'])['cuerpo'],
+        'se atenderá a quien siga'), 'y al confirmarla');
+});
+
+Pruebas::caso('cuando la hora se recorre se repite la advertencia', function () {
+    $dep = base_de_prueba();
+    $turno = crear_turno($dep, 'Luis Mora', 'luis@uaemex.mx', 'Beca', 5);
+    correo_recorrido($dep, $turno, momento_hoy('12:40'), 'https://fingenieria.mx/citas/t/abc');
+
+    $cuerpo = end($GLOBALS['_correos_enviados'])['cuerpo'];
+    Pruebas::cierto(str_contains($cuerpo, '12:40'));
+    Pruebas::cierto(str_contains($cuerpo, 'se atenderá a quien siga'));
+});

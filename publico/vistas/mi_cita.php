@@ -9,6 +9,8 @@
     <p class="estado bien">Confirmada.</p>
     <p><strong><?= u_escapar(u_fecha_larga(a_momento($cita['confirmada'] ?: $cita['propuesta']))) ?></strong>,
        <?= (int) $cita['minutos'] ?> minutos.</p>
+    <p class="aviso">Si no estás a la hora acordada se atenderá a quien siga, y la reunión
+      tendrá que agendarse de nuevo.</p>
   <?php elseif ($cita['estado'] === 'rechazada'): ?>
     <p class="estado aviso">No se confirmó en esa fecha.</p>
     <?php if ($cita['motivo']): ?><p><?= u_escapar($cita['motivo']) ?></p><?php endif; ?>

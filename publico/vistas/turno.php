@@ -81,7 +81,8 @@
     </div>
 
     <button class="grande">Continuar</button>
-    <p class="meta">Te enviaremos un código a tu correo institucional para confirmar.</p>
+    <p class="meta">Te enviaremos un código a tu correo institucional para confirmar.
+      Recuerda que si no estás presente cuando te toque, se atenderá a quien siga.</p>
   </form>
 
   <p><a href="<?= ruta($dep['clave'] . '/fila') ?>">Ver cómo va la fila</a></p>

@@ -21,6 +21,8 @@
       <?php if ($adelante > 0): ?>Hay <?= (int) $adelante ?> persona(s) antes que tú.<?php endif; ?>
     </p>
     <p class="meta">La hora se mueve si una reunión se alarga; te avisamos por correo si cambia mucho.</p>
+    <p class="aviso">Si no estás presente cuando te toque, se atenderá a quien siga y
+      tendrás que formarte de nuevo.</p>
     <form method="post" class="formulario">
       <?= campo_csrf() ?>
       <input type="hidden" name="accion" value="cancelar">
