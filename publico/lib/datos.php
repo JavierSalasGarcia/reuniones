@@ -175,6 +175,25 @@ function fila_estado(array $dep, ?DateTimeImmutable $ahora = null): array
 }
 
 /**
+ * Como se nombra a una persona en el monitor y en la fila publica. Con los
+ * nombres apagados solo se muestra su turno, que es lo mas discreto: quien
+ * espera reconoce su numero y nadie mas se entera de quien vino.
+ */
+function etiqueta_publica(array $dep, array $turno): string
+{
+    if ((int) ($dep['mostrar_nombres'] ?? 1) !== 1) {
+        return 'Turno ' . (int) $turno['folio'];
+    }
+    $publico = trim((string) ($turno['nombre_publico'] ?? ''));
+    return $publico !== '' ? $publico : u_nombre_corto((string) $turno['nombre']);
+}
+
+function muestra_nombres(array $dep): bool
+{
+    return (int) ($dep['mostrar_nombres'] ?? 1) === 1;
+}
+
+/**
  * La frase que ve la gente en la pantalla y en la pagina:
  * "Disponible hasta 12:00", "No disponible hasta 14:00", etcetera.
  */

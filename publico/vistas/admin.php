@@ -38,6 +38,10 @@
       </div>
       <label>Tema de avisos al celular (ntfy)
         <input name="push_tema" value="<?= u_escapar($fila['push_tema']) ?>"></label>
+      <label class="casilla"><input type="checkbox" name="mostrar_nombres" value="1"
+             <?= (int) $fila['mostrar_nombres'] === 1 ? 'checked' : '' ?>>
+        Mostrar el nombre en el monitor y en la fila pública; si lo desmarcas, solo se ve
+        el número de turno</label>
       <?php $avisos = array_map('trim', explode(',', (string) $fila['push_avisos'])); ?>
       <fieldset class="tiempo">
         <legend>Cuándo vibra el reloj</legend>

@@ -3,9 +3,11 @@
     <p class="kiosco-etiqueta">Atendiendo</p>
     <p class="kiosco-folio" id="folio"><?= $estado['actual'] ? (int) $estado['actual']['folio'] : '—' ?></p>
     <p class="kiosco-nombre" id="nombre">
-      <?= $estado['actual']
-          ? u_escapar($estado['actual']['nombre_publico'] ?: u_nombre_corto($estado['actual']['nombre']))
-          : ($estado['abierta'] ? 'En espera' : u_escapar($estado['motivo_cierre'])) ?>
+      <?php if ($estado['actual']): ?>
+        <?= muestra_nombres($dep) ? u_escapar(etiqueta_publica($dep, $estado['actual'])) : 'Pasa por favor' ?>
+      <?php else: ?>
+        <?= $estado['abierta'] ? 'En espera' : u_escapar($estado['motivo_cierre']) ?>
+      <?php endif; ?>
     </p>
     <p class="kiosco-leyenda <?= $estado['atencion'] ?>" id="leyenda">
       <?= u_escapar(leyenda_atencion($estado)) ?>
@@ -17,7 +19,7 @@
     <ul class="kiosco-lista" id="siguientes">
       <?php foreach (array_slice($estado['espera'], 0, 5) as $turno): ?>
       <li><span class="folio-chico"><?= (int) $turno['folio'] ?></span>
-        <span><?= u_escapar($turno['nombre_publico'] ?: u_nombre_corto($turno['nombre'])) ?></span>
+        <span><?= muestra_nombres($dep) ? u_escapar(etiqueta_publica($dep, $turno)) : '' ?></span>
         <span class="hora"><?= $turno['estimado'] ? u_hora($turno['estimado']) : '—' ?></span></li>
       <?php endforeach; ?>
     </ul>

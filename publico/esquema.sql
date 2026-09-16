@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS dependencias (
   push_tema         VARCHAR(80)  NOT NULL DEFAULT '',   -- canal de avisos al celular
   push_detalle      TINYINT(1)   NOT NULL DEFAULT 1,    -- 0 = avisar sin nombre ni asunto
   push_avisos       VARCHAR(80)  NOT NULL DEFAULT 'formado,excedido,cita,vacia',
+  mostrar_nombres   TINYINT(1)   NOT NULL DEFAULT 1,    -- 0 = en pantalla solo el turno
   activa            TINYINT(1)   NOT NULL DEFAULT 1,
   creado            DATETIME     NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

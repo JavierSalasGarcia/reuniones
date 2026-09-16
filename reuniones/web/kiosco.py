@@ -36,6 +36,7 @@ def _instantanea() -> dict:
     momento = util.a_fecha(datos.get("ahora")) if datos else None
     return {
         "fila": fila,
+        "nombres": _nombres_visibles(datos) if datos else True,
         "error": error,
         "mensaje": (datos.get("dependencia") or {}).get("mensaje", "") if datos else "",
         "momento": momento or datetime.now(),
@@ -43,7 +44,14 @@ def _instantanea() -> dict:
     }
 
 
-def _publico(turno: dict) -> str:
+def _nombres_visibles(datos: dict) -> bool:
+    """El monitor respeta lo que el titular eligió en el panel del sitio."""
+    return bool((datos.get("dependencia") or {}).get("mostrar_nombres", True))
+
+
+def _publico(turno: dict, con_nombres: bool = True) -> str:
+    if not con_nombres:
+        return f"Turno {turno.get('folio', '')}".strip()
     nombre = (turno.get("nombre_publico") or turno.get("nombre") or "").strip()
     return " ".join(nombre.split()[:2])
 
@@ -53,6 +61,7 @@ def pantalla(request: Request):
     foto = _instantanea()
     return plantillas.TemplateResponse(request, "pantalla.html", {
         "fila": foto["fila"],
+        "nombres": foto["nombres"],
         "error": foto["error"],
         "mensaje": foto["mensaje"],
         "hora": f"{foto['momento']:%H:%M}",
@@ -66,6 +75,7 @@ def estado_json():
     """Mismo formato que el del sitio publico, para que el guion no cambie."""
     foto = _instantanea()
     fila = foto["fila"]
+    nombres = foto["nombres"]
     return JSONResponse({
         "ahora": f"{foto['momento']:%H:%M}",
         "disponible": bool(fila.get("disponible")),
@@ -74,9 +84,12 @@ def estado_json():
                                        if foto["error"] else ""),
         "local": True,
         "desfasado": bool(foto["error"]),
-        "actual": {"folio": fila["actual"]["folio"], "nombre": _publico(fila["actual"])}
-        if fila.get("actual") else None,
-        "siguientes": [{"folio": t["folio"], "nombre": _publico(t),
+        "nombres": nombres,
+        "actual": {
+            "folio": fila["actual"]["folio"],
+            "nombre": _publico(fila["actual"]) if nombres else "Pasa por favor",
+        } if fila.get("actual") else None,
+        "siguientes": [{"folio": t["folio"], "nombre": _publico(t) if nombres else "",
                         "hora": (t.get("estimado") or "")[11:16] or None}
                        for t in fila.get("espera", [])[:6]],
     })

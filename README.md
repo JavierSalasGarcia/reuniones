@@ -170,6 +170,16 @@ respuestas de las personas lleguen a tu buzón de siempre. Si algún día el cor
 institucional aceptara los mensajes de tu equipo, `via = "laptop"` regresa al envío
 directo por SMTP.
 
+## Lo que ve la gente en el monitor
+
+En el panel de administración decides si el monitor de la entrada y la fila pública
+muestran el nombre de quien está siendo atendido o solo su número de turno. Con los
+nombres apagados, la pantalla grande sigue mostrando el número, que es lo que la persona
+necesita reconocer, y debajo dice «Pasa por favor»; la lista de la fila deja de traer la
+columna de personas y el pasillo entero deja de enterarse de quién vino a verte. Aunque
+los dejes encendidos, cada expediente puede marcarse como reservado para que esa persona
+en particular aparezca solo como su turno.
+
 ## Privacidad
 
 Las fotografías y los vectores faciales son datos personales. El alta exige registrar el

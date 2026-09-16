@@ -206,3 +206,28 @@ Pruebas::caso('sin tema configurado no se revisa nada', function () {
     $dep = dependencia('sa');
     Pruebas::igual(0, count(avisos_del_momento($dep, fila_estado($dep, momento_hoy('11:00')))));
 });
+
+// --- que se ve en el monitor ----------------------------------------------
+
+Pruebas::caso('con los nombres apagados el monitor solo muestra el turno', function () {
+    $dep = base_de_prueba();
+    $turno = crear_turno($dep, 'Ana Ruiz López', 'ana@uaemex.mx', 'Revalidación', 10);
+
+    Pruebas::igual('Ana Ruiz', etiqueta_publica($dep, $turno), 'por omisión sí se ve el nombre');
+    Pruebas::cierto(muestra_nombres($dep));
+
+    consulta('UPDATE dependencias SET mostrar_nombres = 0 WHERE id = 1');
+    $discreta = dependencia('sa');
+    Pruebas::igual('Turno 1', etiqueta_publica($discreta, $turno));
+    Pruebas::igual(false, muestra_nombres($discreta));
+});
+
+Pruebas::caso('el nombre corto del titular manda sobre el completo', function () {
+    $dep = base_de_prueba();
+    $turno = crear_turno($dep, 'José Ramírez Quintana', 'jose@uaemex.mx', 'Caso', 10);
+    consulta('UPDATE turnos SET nombre_publico = ? WHERE id = ?', ['Turno 1', $turno['id']]);
+    $conMarca = fila_una('SELECT * FROM turnos WHERE id = ?', [$turno['id']]);
+
+    Pruebas::igual('Turno 1', etiqueta_publica($dep, $conMarca),
+        'un caso reservado se oculta aunque los nombres esten encendidos');
+});

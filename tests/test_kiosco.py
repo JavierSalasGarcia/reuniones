@@ -128,3 +128,33 @@ def test_un_horario_que_cruza_la_medianoche_se_entiende(tmp_path):
     fin = (ahora + timedelta(hours=2)).strftime("%H:%M")
     # A las 23:00, esa ventana termina al día siguiente: debe seguir encendida.
     assert _con_horas_fijas(tmp_path, inicio, fin) == "1"
+
+
+def test_la_pantalla_local_respeta_los_nombres_apagados(pantalla, monkeypatch):
+    import httpx
+
+    from tests.test_nube import ESTADO, enchufar
+
+    discreta = dict(ESTADO)
+    discreta["dependencia"] = dict(ESTADO["dependencia"], mostrar_nombres=False)
+    enchufar(monkeypatch, lambda p: httpx.Response(200, json=discreta))
+
+    datos = pantalla.get("/estado.json").json()
+    assert datos["nombres"] is False
+    assert datos["actual"]["nombre"] == "Pasa por favor"
+    assert datos["siguientes"][0]["nombre"] == ""
+
+    pagina = pantalla.get("/").text
+    assert "Ana Ruiz" not in pagina and "Luis Mora" not in pagina
+    assert "Pasa por favor" in pagina
+
+
+def test_con_nombres_encendidos_la_pantalla_local_los_muestra(pantalla, monkeypatch):
+    import httpx
+
+    from tests.test_nube import ESTADO, enchufar
+
+    enchufar(monkeypatch, lambda p: httpx.Response(200, json=ESTADO))
+    datos = pantalla.get("/estado.json").json()
+    assert datos["nombres"] is True
+    assert datos["actual"]["nombre"] == "Ana Ruiz"

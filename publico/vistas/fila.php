@@ -7,7 +7,9 @@
   <div class="atendiendo">
     <span class="etiqueta">Atendiendo</span>
     <strong class="folio"><?= (int) $estado['actual']['folio'] ?></strong>
-    <span><?= u_escapar($estado['actual']['nombre_publico'] ?: u_nombre_corto($estado['actual']['nombre'])) ?></span>
+    <?php if (muestra_nombres($dep)): ?>
+    <span><?= u_escapar(etiqueta_publica($dep, $estado['actual'])) ?></span>
+    <?php endif; ?>
   </div>
   <?php else: ?>
   <p class="estado <?= $estado['abierta'] ? 'bien' : 'aviso' ?>">
@@ -17,12 +19,15 @@
 
   <?php if ($estado['espera']): ?>
   <table class="tabla">
-    <thead><tr><th>Turno</th><th>Persona</th><th>Hora aproximada</th></tr></thead>
+    <thead><tr><th>Turno</th><?php if (muestra_nombres($dep)): ?><th>Persona</th><?php endif; ?>
+      <th>Hora aproximada</th></tr></thead>
     <tbody>
       <?php foreach ($estado['espera'] as $turno): ?>
       <tr>
         <td class="folio-chico"><?= (int) $turno['folio'] ?></td>
-        <td><?= u_escapar($turno['nombre_publico'] ?: u_nombre_corto($turno['nombre'])) ?></td>
+        <?php if (muestra_nombres($dep)): ?>
+        <td><?= u_escapar(etiqueta_publica($dep, $turno)) ?></td>
+        <?php endif; ?>
         <td><?= $turno['estimado'] ? u_hora($turno['estimado']) : 'sin hora hoy' ?></td>
       </tr>
       <?php endforeach; ?>

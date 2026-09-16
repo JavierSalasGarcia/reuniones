@@ -139,6 +139,7 @@ if ($accion === 'estado') {
             'colchon_turno' => (int) $dep['colchon_turno'],
             'colchon_reunion' => (int) $dep['colchon_reunion'],
             'minutos_cita' => minutos_de_cita($dep),
+            'mostrar_nombres' => muestra_nombres($dep),
         ],
         'ahora' => $estado['ahora']->format('Y-m-d H:i:s'),
         'abierta' => $estado['abierta'],

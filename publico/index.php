@@ -162,13 +162,15 @@ if ($seccion === 'estado.json') {
         'disponible_hasta' => u_hora($estado['disponible_hasta']),
         'no_disponible_hasta' => u_hora($estado['no_disponible_hasta']),
         'mensaje' => $estado['motivo_cierre'],
+        'nombres' => muestra_nombres($dep),
         'actual' => $estado['actual'] ? [
             'folio' => (int) $estado['actual']['folio'],
-            'nombre' => $estado['actual']['nombre_publico'] ?: u_nombre_corto($estado['actual']['nombre']),
+            'nombre' => muestra_nombres($dep)
+                ? etiqueta_publica($dep, $estado['actual']) : 'Pasa por favor',
         ] : null,
         'siguientes' => array_map(fn($t) => [
             'folio' => (int) $t['folio'],
-            'nombre' => $t['nombre_publico'] ?: u_nombre_corto($t['nombre']),
+            'nombre' => muestra_nombres($dep) ? etiqueta_publica($dep, $t) : '',
             'hora' => $t['estimado'] ? u_hora($t['estimado']) : null,
         ], $espera),
         // El monitor de la entrada usa el horario para prender y apagar la pantalla.

@@ -32,7 +32,9 @@ Si ya tenías la base creada de una instalación anterior, importa además
 `migraciones/002_jornadas.sql`, que agrega la de las jornadas diarias, y
 `migraciones/003_push.sql`, que agrega el canal de avisos al celular, y
 `migraciones/004_token_reloj.sql`, que agrega la llave de solo lectura del reloj, y
-`migraciones/005_avisos.sql`, que agrega los avisos por hora y su memoria.
+`migraciones/005_avisos.sql`, que agrega los avisos por hora y su memoria, y
+`migraciones/006_mostrar_nombres.sql`, que agrega la opción de mostrar solo el número de
+turno en las pantallas públicas.
 
 Si tu hosting no tiene `mod_rewrite`, todo sigue funcionando con la forma larga de las
 direcciones: `https://fingenieria.mx/citas/index.php?r=sa`.

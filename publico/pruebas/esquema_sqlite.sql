@@ -10,6 +10,7 @@ CREATE TABLE dependencias (
   minutos_cita TEXT NOT NULL DEFAULT '20,30,45', push_tema TEXT NOT NULL DEFAULT '',
   push_detalle INTEGER NOT NULL DEFAULT 1,
   push_avisos TEXT NOT NULL DEFAULT 'formado,excedido,cita,vacia',
+  mostrar_nombres INTEGER NOT NULL DEFAULT 1,
   activa INTEGER NOT NULL DEFAULT 1, creado TEXT NOT NULL);
 CREATE TABLE senales (
   id INTEGER PRIMARY KEY AUTOINCREMENT, dependencia_id INTEGER NOT NULL, clave TEXT NOT NULL,

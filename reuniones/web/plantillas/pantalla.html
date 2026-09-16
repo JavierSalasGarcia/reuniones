@@ -13,7 +13,8 @@
     <p class="folio" id="folio">{{ fila.actual.folio if fila.actual else '—' }}</p>
     <p class="nombre" id="nombre">
       {%- if fila.actual -%}
-        {{ (fila.actual.nombre_publico or fila.actual.nombre).split()[:2]|join(' ') }}
+        {%- if nombres -%}{{ (fila.actual.nombre_publico or fila.actual.nombre).split()[:2]|join(' ') }}
+        {%- else -%}Pasa por favor{%- endif -%}
       {%- elif fila.abierta -%}En espera
       {%- else -%}{{ mensaje or 'Sin atención en este momento' }}{%- endif -%}
     </p>
@@ -24,7 +25,7 @@
     <ul class="lista" id="siguientes">
       {% for t in fila.espera[:5] %}
       <li><span class="folio-chico">{{ t.folio }}</span>
-        <span>{{ (t.nombre_publico or t.nombre).split()[:2]|join(' ') }}</span>
+        <span>{% if nombres %}{{ (t.nombre_publico or t.nombre).split()[:2]|join(' ') }}{% endif %}</span>
         <span class="hora">{{ t.estimado[11:16] if t.estimado else '—' }}</span></li>
       {% endfor %}
     </ul>
