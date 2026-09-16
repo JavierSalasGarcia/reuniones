@@ -155,3 +155,16 @@ Pruebas::caso('un adjunto que no existe se ignora en lugar de romper el envio', 
     $armado = correo_armar('Texto', [['nombre' => 'fantasma.pdf', 'ruta' => '/no/existe.pdf']]);
     Pruebas::igual('text/plain; charset=UTF-8', $armado['tipo']);
 });
+
+Pruebas::caso('a quien no se presento se le avisa que su lugar se libero', function () {
+    $dep = base_de_prueba();
+    $turno = crear_turno($dep, 'Luis Mora Sánchez', 'luis@uaemex.mx', 'Beca', 10);
+    correo_no_se_presento($dep, $turno, 'https://fingenieria.mx/citas/sa');
+
+    $aviso = end($GLOBALS['_correos_enviados']);
+    Pruebas::igual('luis@uaemex.mx', $aviso['para']);
+    Pruebas::cierto(str_contains($aviso['asunto'], 'Te llamamos y no estabas'));
+    Pruebas::cierto(str_contains($aviso['cuerpo'], 'turno 1'), 'le recuerda cual era su turno');
+    Pruebas::cierto(str_contains($aviso['cuerpo'], 'https://fingenieria.mx/citas/sa'),
+        'y le deja por donde volver');
+});

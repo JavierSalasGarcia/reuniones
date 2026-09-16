@@ -244,6 +244,16 @@ function correo_minuta(array $dep, array $minuta, string $destinatario, string $
     ]]);
 }
 
+/** Se le llamó y no estaba: que sepa que su turno se liberó. */
+function correo_no_se_presento(array $dep, array $turno, string $enlace): void
+{
+    correo_enviar($turno['email'], "Te llamamos y no estabas · {$dep['nombre']}",
+        "Llegó tu turno {$turno['folio']} y no te encontramos, así que seguimos con "
+        . "quien venía detrás.\n\n"
+        . "Si sigues por aquí, puedes tomar otro turno; si ya no alcanzas hoy, puedes "
+        . "solicitar una reunión con fecha y hora:\n{$enlace}\n\n{$dep['titular']}");
+}
+
 /** Aviso a quien estaba formado cuando hay que cancelar la cola. */
 function correo_cola_cancelada(array $dep, array $turno, string $motivo, string $enlace): void
 {

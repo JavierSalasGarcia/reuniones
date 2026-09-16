@@ -78,6 +78,9 @@
   <section>
     <h2>En espera ({{ fila.espera|length }})</h2>
     {% if fila.espera %}
+    <form method="post" action="/turnos/siguiente" class="en-linea">
+      <button class="grande">Llamar al siguiente: {{ fila.espera[0].folio }} · {{ fila.espera[0].nombre }}</button>
+    </form>
     <table class="tabla">
       <thead><tr><th>Turno</th><th>Persona</th><th>Asunto</th><th>Hora</th><th></th></tr></thead>
       <tbody>
@@ -90,6 +93,10 @@
           <td class="acciones-fila">
             <form method="post" action="/turnos/{{ t.id }}/llamar"><button>Llamar</button></form>
             <form method="post" action="/turnos/{{ t.id }}/cerrar">
+              <button name="accion" value="ausente" class="secundario"
+                      title="Se le llamó y no estaba; se le avisa por correo">No llegó</button>
+            </form>
+            <form method="post" action="/turnos/{{ t.id }}/cerrar">
               <button name="accion" value="cancelar" class="secundario">Cancelar</button>
             </form>
           </td>
@@ -98,7 +105,9 @@
       </tbody>
     </table>
     <p class="apunte">Al llamar a alguien se abre su expediente y se crea la reunión con su asunto.
-      Si es su primera vez, el sistema te lleva al alta con sus datos ya escritos.</p>
+      Si es su primera vez, el sistema te lleva al alta con sus datos ya escritos.
+      «No llegó» libera su lugar y le avisa por correo que puede volver a formarse;
+      la fila se recorre sola y sigue el de abajo.</p>
     {% else %}<p class="vacio">Nadie esperando. {{ fila.atendidos }} atendido(s) hoy.</p>{% endif %}
   </section>
 

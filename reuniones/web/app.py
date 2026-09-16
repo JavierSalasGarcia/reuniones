@@ -8,7 +8,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, Form, HTTPException, Query, Request, UploadFile
+from fastapi import (Depends, FastAPI, File, Form, HTTPException, Query, Request,
+                     UploadFile)
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -266,20 +267,38 @@ def cambiar_acuerdo(acuerdo_id: int, reunion_id: int = Form(...), cerrar: str = 
 
 
 @app.post("/reunion/{reunion_id}/adjunto")
-async def subir_adjunto(reunion_id: int, archivo: UploadFile,
-                        clase: str = Form("adjunto"),
+async def subir_adjunto(reunion_id: int, archivos: list[UploadFile] = File(...),
+                        clase: str = Form("auto"),
                         con: sqlite3.Connection = Depends(base_datos)):
+    """Sube la minuta y la transcripción de una vez, reconociéndolas por su nombre."""
     fila = expediente.reunion(con, reunion_id)
     if fila is None:
-        raise HTTPException(404, "No existe esa reunion.")
+        raise HTTPException(404, "No existe esa reunión.")
     cfg = config.actual()
     cfg.crear_carpetas()
-    temporal = util.ruta_unica(cfg.temporal / (archivo.filename or "archivo.txt"))
-    temporal.write_bytes(await archivo.read())
-    analisis = ingesta.analizar_nombre(temporal.name)
-    sello = analisis.sello if analisis else None
-    expediente.adjuntar(con, reunion_id, temporal, clase if clase in expediente.CLASES else "adjunto", sello)
+
+    guardados = 0
+    for archivo in archivos:
+        if not (archivo.filename or "").strip():
+            continue
+        temporal = util.ruta_unica(cfg.temporal / archivo.filename)
+        temporal.write_bytes(await archivo.read())
+
+        analisis = ingesta.analizar_nombre(temporal.name)
+        if clase == "auto":
+            # aaaammdd_hhmm_minuta.txt y su pareja se reconocen solas
+            destino = analisis.clase if analisis else "adjunto"
+        else:
+            destino = clase if clase in expediente.CLASES else "adjunto"
+
+        expediente.adjuntar(con, reunion_id, temporal,
+                            destino, analisis.sello if analisis else None)
+        guardados += 1
+
     con.commit()
+    if not guardados:
+        return RedirectResponse(f"/reunion/{reunion_id}?error=No elegiste ningún archivo",
+                                status_code=303)
     return RedirectResponse(f"/reunion/{reunion_id}", status_code=303)
 
 
@@ -478,6 +497,16 @@ def llamar_turno(turno_id: int, con: sqlite3.Connection = Depends(base_datos)):
     consulta = urlencode({"nombre": turno.get("nombre", ""), "email": turno.get("email", ""),
                           "asunto": turno.get("asunto", "")})
     return RedirectResponse(f"/alta?{consulta}", status_code=303)
+
+
+@app.post("/turnos/siguiente")
+def llamar_siguiente(con: sqlite3.Connection = Depends(base_datos)):
+    """Llama al primero de la fila, saltándose a quien ya se marcó ausente."""
+    datos = nube.ultimo_estado()
+    espera = [t for t in datos.get("turnos", []) if t.get("estado") == "espera"]
+    if not espera:
+        return RedirectResponse("/turnos?aviso=No hay nadie esperando.", status_code=303)
+    return llamar_turno(int(espera[0]["id"]), con)
 
 
 @app.post("/turnos/{turno_id}/cerrar")

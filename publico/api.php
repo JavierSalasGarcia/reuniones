@@ -305,10 +305,18 @@ if ($accion === 'turno') {
         u_json(['error' => 'turno no encontrado'], 404);
         exit;
     }
+    $enlacePublico = rtrim((string) (config()['sitio'] ?? ''), '/') . '/' . $dep['clave'];
+
     switch ((string) ($cuerpo['accion'] ?? '')) {
         case 'llamar':
+            // Solo se atiende a uno a la vez: quien estuviera llamado y no entro,
+            // se marca ausente y se le avisa que su turno se libero.
+            foreach (filas('SELECT * FROM turnos WHERE dependencia_id = ? AND estado = ? AND id <> ?',
+                [$dep['id'], 'llamado', $turno['id']]) as $anterior) {
+                correo_no_se_presento($dep, $anterior, $enlacePublico);
+            }
             consulta('UPDATE turnos SET estado = ?, llamado = ? WHERE dependencia_id = ? AND estado = ?',
-                ['ausente', ahora_texto(), $dep['id'], 'llamado']);   // solo uno a la vez
+                ['ausente', ahora_texto(), $dep['id'], 'llamado']);
             consulta('UPDATE turnos SET estado = ?, llamado = ?, nombre_publico = ? WHERE id = ?',
                 ['llamado', ahora_texto(),
                  u_limpio($cuerpo['nombre_publico'] ?? $turno['nombre_publico'], 120), $turno['id']]);
@@ -321,6 +329,8 @@ if ($accion === 'turno') {
         case 'ausente':
             consulta('UPDATE turnos SET estado = ?, cerrado = ? WHERE id = ?',
                 ['ausente', ahora_texto(), $turno['id']]);
+            correo_no_se_presento($dep, $turno, $enlacePublico);
+            evento((int) $dep['id'], 'ausente', "folio {$turno['folio']}");
             break;
         case 'cancelar':
             cancelar_turno($turno, 'titular');

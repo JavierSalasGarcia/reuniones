@@ -87,13 +87,17 @@
     {% else %}<li class="vacio">Ninguno todavía.</li>{% endfor %}
   </ul>
   <form method="post" action="/reunion/{{ reunion.id }}/adjunto" enctype="multipart/form-data" class="en-linea">
-    <input type="file" name="archivo" required>
+    <input type="file" name="archivos" multiple required>
     <select name="clase">
-      <option value="minuta">minuta</option>
-      <option value="original">transcripción original</option>
-      <option value="adjunto">adjunto</option>
+      <option value="auto">reconocer por el nombre</option>
+      <option value="minuta">todos, como minuta</option>
+      <option value="original">todos, como transcripción</option>
+      <option value="adjunto">todos, como adjunto</option>
     </select>
     <button class="secundario">Subir</button>
   </form>
+  <p class="apunte">Puedes elegir los dos archivos a la vez. Si traen el nombre del
+    teléfono, <code>aaaammdd_hhmm_minuta.txt</code> y <code>aaaammdd_hhmm_original.txt</code>,
+    el sistema sabe cuál es cuál; si no, dile tú de qué se trata.</p>
 </section>
 {% endblock %}

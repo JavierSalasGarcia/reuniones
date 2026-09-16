@@ -269,3 +269,73 @@ def test_el_panel_avisa_cuando_la_reunion_se_paso_de_tiempo(cliente, entorno, mo
     pagina = cliente.get("/turnos").text
     assert "Llevan 14 de 10 minutos" in pagina and "4 de más" in pagina
     nube._cache.datos, nube._cache.momento = {}, 0.0
+
+
+def test_se_suben_minuta_y_transcripcion_de_una_vez(cliente, entorno):
+    _, reunion_id = _persona_con_reunion(cliente, entorno)
+    respuesta = cliente.post(
+        f"/reunion/{reunion_id}/adjunto",
+        files=[
+            ("archivos", ("20260914_1030_minuta.txt", b"Acuerdo: revisar el caso.", "text/plain")),
+            ("archivos", ("20260914_1030_original.txt", b"Hablante 1: buenos dias.", "text/plain")),
+        ],
+        data={"clase": "auto"},
+        follow_redirects=True,
+    )
+    assert respuesta.status_code == 200
+    assert "revisar el caso" in respuesta.text and "buenos dias" in respuesta.text
+
+    from reuniones import db, expediente
+    with db.sesion() as con:
+        clases = sorted(a["clase"] for a in expediente.archivos_de(con, reunion_id))
+    assert clases == ["minuta", "original"], "cada archivo quedó en su lugar por su nombre"
+
+
+def test_un_archivo_sin_el_formato_del_telefono_se_guarda_como_adjunto(cliente, entorno):
+    _, reunion_id = _persona_con_reunion(cliente, entorno)
+    cliente.post(f"/reunion/{reunion_id}/adjunto",
+                 files=[("archivos", ("notas sueltas.txt", b"apuntes", "text/plain"))],
+                 data={"clase": "auto"}, follow_redirects=True)
+
+    from reuniones import db, expediente
+    with db.sesion() as con:
+        clases = [a["clase"] for a in expediente.archivos_de(con, reunion_id)]
+    assert "adjunto" in clases
+
+
+def test_se_puede_decir_a_mano_que_es_cada_archivo(cliente, entorno):
+    _, reunion_id = _persona_con_reunion(cliente, entorno)
+    cliente.post(f"/reunion/{reunion_id}/adjunto",
+                 files=[("archivos", ("minuta del martes.txt", b"lo acordado", "text/plain"))],
+                 data={"clase": "minuta"}, follow_redirects=True)
+
+    from reuniones import db, expediente
+    with db.sesion() as con:
+        minutas = expediente.archivos_de(con, reunion_id, "minuta")
+    assert len(minutas) == 1
+
+
+def test_el_panel_ofrece_llamar_al_siguiente_y_marcar_que_no_llego(cliente, entorno, monkeypatch):
+    nube = _conectar_nube(entorno, monkeypatch)
+    pagina = cliente.get("/turnos").text
+    assert "Llamar al siguiente: 2 · Luis Mora" in pagina
+    assert "No llegó" in pagina
+    nube._cache.datos, nube._cache.momento = {}, 0.0
+
+
+def test_llamar_al_siguiente_toma_al_primero_de_la_fila(cliente, entorno, monkeypatch):
+    import httpx
+
+    from reuniones import nube, turnos
+    from tests.test_nube import ESTADO
+
+    _conectar_nube(entorno, monkeypatch)
+    nube.estado(forzar=True)
+
+    llamados = []
+    monkeypatch.setattr(turnos, "llamar", lambda con, turno: llamados.append(turno) or
+                        {"persona_id": None, "reunion_id": None, "email": turno["email"],
+                         "nombre": turno["nombre"]})
+    cliente.post("/turnos/siguiente", follow_redirects=False)
+    assert [t["folio"] for t in llamados] == [2], "el que sigue, no el que ya está adentro"
+    nube._cache.datos, nube._cache.momento = {}, 0.0

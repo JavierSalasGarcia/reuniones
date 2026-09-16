@@ -74,7 +74,13 @@ pantalla y su token. Su instalación se explica en `publico/LEEME.md`.
 En tu laptop, la pestaña **Fila** muestra quién espera con su asunto y su hora estimada.
 Al llamar a alguien se abre su expediente y se crea la reunión con el asunto que esa
 persona escribió; si es su primera vez, el sistema te lleva al alta con sus datos ya
-capturados. La pestaña **Agenda** publica tu horario semanal, aparta ratos para juntas y
+capturados. Hay un botón para llamar directamente al siguiente, y en cada renglón la
+opción «No llegó», para cuando alguien se formó y no se presentó: su lugar se libera, la
+fila se recorre sola y a esa persona le llega un correo diciéndole que puede volver a
+formarse o agendar.
+
+Desde la reunión se suben la minuta y la transcripción, las dos a la vez; si traen el
+nombre que pone el teléfono, el sistema reconoce cuál es cuál, y si no, tú se lo dices. La pestaña **Agenda** publica tu horario semanal, aparta ratos para juntas y
 genera el QR para imprimir.
 
 ## Jornada, cola y citas

@@ -21,7 +21,10 @@ def conectar(ruta: Path | None = None) -> sqlite3.Connection:
     cfg = config.actual()
     ruta = ruta or cfg.base_datos
     ruta.parent.mkdir(parents=True, exist_ok=True)
-    con = sqlite3.connect(ruta, detect_types=0, timeout=15.0)
+    # check_same_thread=False porque el servidor web atiende cada petición en el
+    # hilo que le toca: la conexión es de una sola petición y nunca se comparte
+    # entre dos al mismo tiempo, pero sí puede cambiar de hilo dentro de una.
+    con = sqlite3.connect(ruta, detect_types=0, timeout=15.0, check_same_thread=False)
     con.row_factory = sqlite3.Row
     con.execute("PRAGMA foreign_keys = ON")
     con.execute("PRAGMA journal_mode = WAL")
